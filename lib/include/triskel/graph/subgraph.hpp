@@ -66,12 +66,6 @@ struct SubGraph : public IGraph {
     [[nodiscard]] auto contains(NodeId node) -> bool;
     [[nodiscard]] auto contains(EdgeId edge) -> bool;
 
-    [[nodiscard]] auto get_nodes(const std::span<const NodeId>& ids) const
-        -> std::vector<Node> override;
-
-    [[nodiscard]] auto get_edges(const std::span<const EdgeId>& ids) const
-        -> std::vector<Edge> override;
-
    private:
     Graph& g_;
 

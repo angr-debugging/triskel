@@ -1,15 +1,38 @@
 #include "triskel/graph/graph.hpp"
+#include <unistd.h>
 
 #include <cassert>
 #include <cstddef>
-#include <ranges>
+#include <memory>
 #include <stack>
+#include <unordered_map>
 #include <vector>
 
 #include "triskel/graph/igraph.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
+
+namespace {
+
+/// @brief Adds an edge to each of its nodes
+void link_edge(EdgeData& edge) {
+    // Child edges go in the back
+    edge.from->edges.push_back(&edge);
+
+    // Parent edges go in the front
+    edge.to->edges.insert(edge.to->edges.begin(), &edge);
+    edge.to->separator++;
+}
+
+/// @brief Removes an edge from each of its nodes
+void unlink_edge(EdgeData& edge) {
+    std::erase(edge.from->edges, &edge);
+    std::erase(edge.to->edges, &edge);
+    edge.to->separator--;
+}
+
+}  // namespace
 
 // =============================================================================
 // GraphEditor
@@ -21,77 +44,76 @@ GraphEditor::~GraphEditor() {
 }
 
 auto GraphEditor::make_node() -> Node {
-    g_.data_.nodes.push_back(NodeData{
-        .id = NodeId{g_.data_.nodes.size()}, .edges = {}, .deleted = false});
-    const auto& n = g_.data_.nodes.back();
+    auto id = NodeId{next_node_id_};
+    ++next_node_id_;
+
+    g_.data_.nodes[id] = std::make_unique<NodeData>(id);
 
     // Sets the root if it is not defined
     if (g_.data_.root == NodeId::InvalidID) {
-        g_.data_.root = n.id;
+        g_.data_.root = id;
     }
 
     frame().created_nodes_count += 1;
-    return g_.get_node(n.id);
+    return g_.get_node(id);
 }
 
 void GraphEditor::remove_node(NodeId id) {
     const auto& node = g_.get_node(id);
-    auto& n          = g_.get_node_data(id);
 
     // Not handled
-    assert(!node.is_root());
+    assert(node != g_.root());
 
     for (const auto& edge : node.edges()) {
         remove_edge(edge);
     }
 
-    n.deleted = true;
-    frame().deleted_nodes.push(n.id);
+    auto n = std::move(g_.data_.nodes[id]);
+    g_.data_.nodes.erase(id);
+    frame().deleted_nodes.push(std::move(n));
+}
+
+auto GraphEditor::make_edge(EdgeId id, NodeId from, NodeId to) -> EdgeData& {
+    g_.data_.edges[id] = std::make_unique<EdgeData>(id);
+
+    auto& edge = *g_.data_.edges[id];
+
+    edge.from = g_.data_.nodes[from].get();
+    edge.to   = g_.data_.nodes[to].get();
+
+    link_edge(edge);
+
+    return edge;
 }
 
 auto GraphEditor::make_edge(NodeId from, NodeId to) -> Edge {
-    g_.data_.edges.push_back(
-        EdgeData{.id = EdgeId{g_.data_.edges.size()}, .from = from, .to = to});
-    const auto& e = g_.data_.edges.back();
+    auto id = EdgeId{next_edge_id_};
+    ++next_edge_id_;
 
-    g_.get_node_data(from).edges.push_back(e.id);
-    g_.get_node_data(to).edges.push_back(e.id);
-
-    frame().created_edges.push(e.id);
-    return g_.get_edge(e.id);
+    auto& edge = make_edge(id, from, to);
+    frame().created_edges_count++;
+    return {edge};
 }
 
-void GraphEditor::remove_edge(EdgeId edge) {
-    auto& e   = g_.get_edge_data(edge);
-    e.deleted = true;
+void GraphEditor::remove_edge(EdgeId id) {
+    auto edge = std::move(g_.data_.edges[id]);
+    g_.data_.edges.erase(id);
 
-    auto& from = g_.get_node_data(e.from);
-    auto& to   = g_.get_node_data(e.to);
+    unlink_edge(*edge);
 
-    std::erase(from.edges, edge);
-    std::erase(to.edges, edge);
-
-    frame().deleted_edges.push(e.id);
+    frame().deleted_edges.push(std::move(edge));
 }
 
-void GraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
-    auto& e = g_.get_edge_data(edge);
-    frame().modified_edges.push(e);
+void GraphEditor::edit_edge(EdgeId id, NodeId new_from, NodeId new_to) {
+    // Delete the old edge
+    {
+        auto edge = std::move(g_.data_.edges[id]);
+        unlink_edge(*edge);
+        frame().modified_edges.push(std::move(edge));
+    }
 
-    auto& old_from = g_.get_node_data(e.from);
-    auto& old_to   = g_.get_node_data(e.to);
-
-    auto& from = g_.get_node_data(new_from);
-    auto& to   = g_.get_node_data(new_to);
-
-    std::erase(old_from.edges, e.id);
-    std::erase(old_to.edges, e.id);
-
-    from.edges.push_back(e.id);
-    to.edges.push_back(e.id);
-
-    e.from = new_from;
-    e.to   = new_to;
+    // Create a new edge
+    make_edge(id, new_from, new_to);
 }
 
 auto GraphEditor::frame() -> Frame& {
@@ -111,74 +133,43 @@ void GraphEditor::pop() {
     // The order here is important, otherwise we might modify deleted elements
     // Revert edited edges
     while (!f.modified_edges.empty()) {
-        auto e = f.modified_edges.top();
+        auto old_edge = std::move(f.modified_edges.top());
         f.modified_edges.pop();
 
-        auto& edge = g_.get_edge_data(e.id);
+        auto& new_edge = g_.data_.edges[old_edge->id];
+        unlink_edge(*new_edge);
 
-        auto& new_from = g_.get_node_data(edge.from);
-        auto& new_to   = g_.get_node_data(edge.to);
-
-        auto& from = g_.get_node_data(e.from);
-        auto& to   = g_.get_node_data(e.to);
-
-        std::erase(new_from.edges, e.id);
-        std::erase(new_to.edges, e.id);
-
-        from.edges.push_back(e.id);
-        to.edges.push_back(e.id);
-
-        edge.from = e.from;
-        edge.to   = e.to;
+        link_edge(*old_edge);
+        g_.data_.edges[old_edge->id] = std::move(old_edge);
     }
 
     // Revert removed edges
     while (!f.deleted_edges.empty()) {
-        auto eid = f.deleted_edges.top();
+        auto edge = std::move(f.deleted_edges.top());
         f.deleted_edges.pop();
-
-        auto& e   = g_.get_edge_data(eid);
-        e.deleted = false;
-
-        auto& from = g_.get_node_data(e.from);
-        auto& to   = g_.get_node_data(e.to);
-
-        from.edges.push_back(eid);
-        to.edges.push_back(eid);
+        link_edge(*edge);
+        g_.data_.edges[edge->id] = std::move(edge);
     }
 
     // Revert removed nodes
     while (!f.deleted_nodes.empty()) {
-        auto nid = f.deleted_nodes.top();
+        auto node = std::move(f.deleted_nodes.top());
         f.deleted_nodes.pop();
-
-        g_.get_node_data(nid).deleted = false;
+        g_.data_.nodes[node->id] = std::move(node);
     }
 
-    // Revert created edges
-    auto created_edge_count = 0;
-    while (!f.created_edges.empty()) {
-        auto eid = f.created_edges.top();
-        f.created_edges.pop();
-
-        auto& e = g_.get_edge_data(eid);
-
-        auto& from = g_.get_node_data(e.from);
-        auto& to   = g_.get_node_data(e.to);
-
-        std::erase(from.edges, eid);
-        std::erase(to.edges, eid);
-
-        created_edge_count++;
-    }
-
-    for (size_t i = 0; i < created_edge_count; ++i) {
-        g_.data_.edges.pop_back();
+    for (size_t i = 0; i < f.created_edges_count; ++i) {
+        next_edge_id_--;
+        const auto id = EdgeId{next_edge_id_};
+        unlink_edge(*g_.data_.edges[id]);
+        g_.data_.edges.erase(id);
     }
 
     // Revert created nodes
     for (size_t i = 0; i < f.created_nodes_count; ++i) {
-        g_.data_.nodes.pop_back();
+        next_node_id_--;
+        const auto id = NodeId{next_node_id_};
+        g_.data_.nodes.erase(id);
     }
 
     frames.pop();
@@ -202,63 +193,37 @@ auto Graph::root() const -> Node {
 }
 
 auto Graph::nodes() const -> std::vector<Node> {
-    return data_.nodes  //
-           | std::ranges::views::filter(
-                 [&](const NodeData& n) { return !n.deleted; })  //
-           | std::ranges::views::transform(
-                 [&](const NodeData& n) { return get_node(n.id); })  //
-           | std::ranges::to<std::vector<Node>>();
+    return data_.nodes;
 }
 
 auto Graph::edges() const -> std::vector<Edge> {
-    return data_.edges  //
-           | std::ranges::views::filter(
-                 [&](const EdgeData& e) { return !e.deleted; })  //
-           | std::ranges::views::transform(
-                 [&](const EdgeData& e) { return get_edge(e.id); })  //
-           | std::ranges::to<std::vector<Edge>>();
+    return data_.edges;
 }
 
 auto Graph::get_node(NodeId id) const -> Node {
     assert(id != NodeId::InvalidID);
-    return Node{*this, get_node_data(id)};
+    return {*data_.nodes.at(id)};
 }
 
 auto Graph::get_edge(EdgeId id) const -> Edge {
     assert(id != EdgeId::InvalidID);
-    return Edge{*this, get_edge_data(id)};
-}
-
-auto Graph::get_edge_data(EdgeId id) -> EdgeData& {
-    return data_.edges[static_cast<size_t>(id)];
-}
-
-auto Graph::get_edge_data(EdgeId id) const -> const EdgeData& {
-    return data_.edges[static_cast<size_t>(id)];
-}
-
-auto Graph::get_node_data(NodeId id) -> NodeData& {
-    return data_.nodes[static_cast<size_t>(id)];
-}
-
-auto Graph::get_node_data(NodeId id) const -> const NodeData& {
-    return data_.nodes[static_cast<size_t>(id)];
+    return {*data_.edges.at(id)};
 }
 
 auto Graph::max_node_id() const -> size_t {
-    return data_.nodes.size();
+    return editor_.next_node_id_;
 }
 
 auto Graph::max_edge_id() const -> size_t {
-    return data_.edges.size();
+    return editor_.next_edge_id_;
 }
 
 auto Graph::node_count() const -> size_t {
-    return nodes().size();
+    return data_.nodes.size();
 }
 
 auto Graph::edge_count() const -> size_t {
-    return edges().size();
+    return data_.edges.size();
 }
 
 auto Graph::editor() -> GraphEditor& {

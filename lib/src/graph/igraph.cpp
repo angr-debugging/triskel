@@ -1,10 +1,7 @@
 #include "triskel/graph/igraph.hpp"
 
 #include <cassert>
-#include <ranges>
-#include <span>
 #include <string>
-#include <vector>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -13,94 +10,75 @@
 using namespace triskel;
 
 // =============================================================================
+// Iterators
+// =============================================================================
+inline auto EdgeExtractor::get(const Unit& /**/, const EdgeData& data) -> Edge {
+    return {data};
+}
+
+inline auto ChildExtractor::get(const Unit& /**/,
+                                const EdgeData& data) -> Node {
+    return {*data.to};
+}
+
+inline auto ParentExtractor::get(const Unit& /**/,
+                                 const EdgeData& data) -> Node {
+    return {*data.from};
+}
+
+inline auto NeighborExtractor::get(const Node& self,
+                                   const EdgeData& data) -> Node {
+    return {self == data.to->id ? *data.from : *data.to};
+}
+
+// =============================================================================
 // Nodes
 // =============================================================================
-auto Node::operator=(const Node& node) -> Node& {
-    if (this == &node) {
-        return *this;
-    }
-
-    assert(&g_ == &node.g_);
-    n_ = node.n_;
-    return *this;
-}
+Node::Node(const NodeData& n) : n_{&n} {}
 
 auto Node::id() const -> NodeId {
     return n_->id;
 }
 
-auto Node::edges() const -> std::vector<Edge> {
-    return g_.get_edges(n_->edges);
+auto Node::edges() const -> EdgeIterator {
+    return {{}, n_->edges};
 }
 
-auto Node::child_edges() const -> std::vector<Edge> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.from() == *this; })  //
-           | std::ranges::to<std::vector<Edge>>();
+auto Node::child_edges() const -> EdgeIterator {
+    return {{}, n_->edges, n_->separator};
 }
 
-auto Node::parent_edges() const -> std::vector<Edge> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.to() == *this; })  //
-           | std::ranges::to<std::vector<Edge>>();
+auto Node::parent_edges() const -> EdgeIterator {
+    return {{}, n_->edges, 0, n_->separator};
 }
 
-auto Node::child_nodes() const -> std::vector<Node> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.from() == *this; })  //
-           | std::ranges::views::transform(
-                 [&](const Edge& e) { return e.to(); })  //
-           | std::ranges::to<std::vector<Node>>();
+auto Node::neighbors() const -> NeighborNodeIterator {
+    return {*this, n_->edges};
 }
 
-auto Node::parent_nodes() const -> std::vector<Node> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.to() == *this; })  //
-           | std::ranges::views::transform(
-                 [&](const Edge& e) { return e.from(); })  //
-           | std::ranges::to<std::vector<Node>>();
+auto Node::child_nodes() const -> ChildNodeIterator {
+    return {{}, n_->edges};
 }
 
-auto Node::neighbors() const -> std::vector<Node> {
-    return edges()  //
-           | std::ranges::views::transform(
-                 [&](const Edge& e) { return e.other(*this); })  //
-           | std::ranges::to<std::vector<Node>>();
-}
-
-auto Node::is_root() const -> bool {
-    return *this == g_.root();
+auto Node::parent_nodes() const -> ParentNodeIterator {
+    return {{}, n_->edges};
 }
 
 // =============================================================================
 // Edges
 // =============================================================================
-Edge::Edge(const IGraph& g, const EdgeData& e) : g_{g}, e_{&e} {}
-
-auto Edge::operator=(const Edge& other) -> Edge& {
-    if (this == &other) {
-        return *this;
-    }
-
-    assert(&g_ == &other.g_);
-    e_ = other.e_;
-    return *this;
-}
+Edge::Edge(const EdgeData& e) : e_{&e} {}
 
 auto Edge::id() const -> EdgeId {
     return e_->id;
 }
 
 auto Edge::from() const -> Node {
-    return g_.get_node(e_->from);
+    return {*e_->from};
 }
 
 auto Edge::to() const -> Node {
-    return g_.get_node(e_->to);
+    return {*e_->to};
 }
 
 auto Edge::other(NodeId n) const -> Node {
@@ -109,19 +87,6 @@ auto Edge::other(NodeId n) const -> Node {
     }
 
     return to();
-}
-
-// =============================================================================
-// Graphs
-// =============================================================================
-auto IGraph::get_nodes(const std::span<const NodeId>& ids) const
-    -> std::vector<Node> {
-    return ids | node_view();
-}
-
-auto IGraph::get_edges(const std::span<const EdgeId>& ids) const
-    -> std::vector<Edge> {
-    return ids | edge_view();
 }
 
 // =============================================================================

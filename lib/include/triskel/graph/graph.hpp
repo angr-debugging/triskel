@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <memory>
 #include <stack>
 #include "triskel/graph/igraph.hpp"
 
@@ -17,27 +19,34 @@ struct GraphEditor : public IGraphEditor {
     auto make_node() -> Node override;
     void remove_node(NodeId id) override;
     auto make_edge(NodeId from, NodeId to) -> Edge override;
-    void edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) override;
-    void remove_edge(EdgeId edge) override;
+    void edit_edge(EdgeId id, NodeId new_from, NodeId new_to) override;
+    void remove_edge(EdgeId id) override;
     void push() override;
     void pop() override;
     void commit() override;
 
    private:
+    size_t next_node_id_ = 0;
+    size_t next_edge_id_ = 0;
+
     struct Frame {
         size_t created_nodes_count;
-        std::stack<NodeId> deleted_nodes;
+        std::stack<std::unique_ptr<NodeData>> deleted_nodes;
 
-        std::stack<EdgeId> created_edges;
-        std::stack<EdgeId> deleted_edges;
-        std::stack<EdgeData> modified_edges;
+        size_t created_edges_count;
+        std::stack<std::unique_ptr<EdgeData>> deleted_edges;
+        std::stack<std::unique_ptr<EdgeData>> modified_edges;
     };
 
     auto frame() -> Frame&;
 
+    auto make_edge(EdgeId id, NodeId from, NodeId to) -> EdgeData&;
+
     Graph& g_;
 
     std::stack<Frame> frames;
+
+    friend struct Graph;
 };
 
 /// @brief A graph that owns its data
@@ -78,14 +87,6 @@ struct Graph : public IGraph {
     GraphEditor editor_;
 
     GraphData data_;
-
-    /// Gets the data of a specific node
-    [[nodiscard]] auto get_node_data(NodeId id) -> NodeData&;
-    [[nodiscard]] auto get_node_data(NodeId id) const -> const NodeData&;
-
-    /// Gets the data of a specific edge
-    [[nodiscard]] auto get_edge_data(EdgeId id) -> EdgeData&;
-    [[nodiscard]] auto get_edge_data(EdgeId id) const -> const EdgeData&;
 
     friend struct GraphEditor;
     friend struct SubGraph;
