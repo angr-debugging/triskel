@@ -1,7 +1,10 @@
 #include "triskel/graph/igraph.hpp"
 
 #include <cassert>
+#include <cstddef>
+#include <generator>
 #include <string>
+#include <vector>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -10,25 +13,23 @@
 using namespace triskel;
 
 // =============================================================================
-// Iterators
+// EdgeData
 // =============================================================================
-inline auto EdgeExtractor::get(const Unit& /**/, const EdgeData& data) -> Edge {
-    return {data};
+/// @brief Adds an edge to each of its nodes
+void EdgeData::link() {
+    // Child edges go in the back
+    from->edges.push_back(this);
+
+    // Parent edges go in the front
+    to->edges.insert(to->edges.begin(), this);
+    to->separator++;
 }
 
-inline auto ChildExtractor::get(const Unit& /**/,
-                                const EdgeData& data) -> Node {
-    return {*data.to};
-}
-
-inline auto ParentExtractor::get(const Unit& /**/,
-                                 const EdgeData& data) -> Node {
-    return {*data.from};
-}
-
-inline auto NeighborExtractor::get(const Node& self,
-                                   const EdgeData& data) -> Node {
-    return {self == data.to->id ? *data.from : *data.to};
+/// @brief Removes an edge from each of its nodes
+void EdgeData::unlink() {
+    std::erase(from->edges, this);
+    std::erase(to->edges, this);
+    to->separator--;
 }
 
 // =============================================================================
@@ -40,28 +41,44 @@ auto Node::id() const -> NodeId {
     return n_->id;
 }
 
-auto Node::edges() const -> EdgeIterator {
-    return {{}, n_->edges};
+auto Node::edges() const -> std::generator<Edge> {
+    for (const auto* edge : n_->edges) {
+        co_yield Edge{*edge};
+    }
 }
 
-auto Node::child_edges() const -> EdgeIterator {
-    return {{}, n_->edges, n_->separator};
+auto Node::child_edges() const -> std::generator<Edge> {
+    for (size_t i = n_->separator; i < n_->edges.size(); ++i) {
+        co_yield Edge{*n_->edges[i]};
+    }
 }
 
-auto Node::parent_edges() const -> EdgeIterator {
-    return {{}, n_->edges, 0, n_->separator};
+auto Node::parent_edges() const -> std::generator<Edge> {
+    for (size_t i = 0; i < n_->separator; ++i) {
+        co_yield Edge{*n_->edges[i]};
+    }
 }
 
-auto Node::neighbors() const -> NeighborNodeIterator {
-    return {*this, n_->edges};
+auto Node::neighbors() const -> std::generator<Node> {
+    for (const auto* edge : n_->edges) {
+        if (edge->to == n_) {
+            co_yield Node{*edge->from};
+        } else {
+            co_yield Node{*edge->to};
+        }
+    }
 }
 
-auto Node::child_nodes() const -> ChildNodeIterator {
-    return {{}, n_->edges};
+auto Node::child_nodes() const -> std::generator<Node> {
+    for (size_t i = n_->separator; i < n_->edges.size(); ++i) {
+        co_yield Node{*n_->edges[i]->to};
+    }
 }
 
-auto Node::parent_nodes() const -> ParentNodeIterator {
-    return {{}, n_->edges};
+auto Node::parent_nodes() const -> std::generator<Node> {
+    for (size_t i = 0; i < n_->separator; ++i) {
+        co_yield Node{*n_->edges[i]->from};
+    }
 }
 
 // =============================================================================

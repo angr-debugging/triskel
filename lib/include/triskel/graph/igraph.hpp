@@ -4,7 +4,7 @@
 #include <compare>
 #include <concepts>
 #include <cstddef>
-#include <iterator>
+#include <generator>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -78,8 +78,13 @@ struct EdgeTag {};
 using EdgeId = ID<EdgeTag>;
 static_assert(std::is_trivially_copyable_v<EdgeId>);
 
-struct GraphData;
 struct EdgeData;
+struct NodeData;
+struct GraphData;
+struct Edge;
+struct Node;
+struct IGraph;
+struct IGraphEditor;
 
 struct NodeData {
     explicit NodeData(NodeId id) : id{id} {}
@@ -98,178 +103,23 @@ struct EdgeData {
 
     NodeData* from;
     NodeData* to;
+
+    /// @brief Adds the edge to each of its nodes
+    void link();
+
+    /// @brief Removes the edge from each of its nodes
+    void unlink();
 };
+
+using NodeMap = std::unordered_map<NodeId, std::unique_ptr<NodeData>>;
+using EdgeMap = std::unordered_map<EdgeId, std::unique_ptr<EdgeData>>;
 
 struct GraphData {
     NodeId root;
 
-    std::unordered_map<NodeId, std::unique_ptr<NodeData>> nodes;
-    std::unordered_map<EdgeId, std::unique_ptr<EdgeData>> edges;
+    NodeMap nodes;
+    EdgeMap edges;
 };
-
-struct Edge;
-struct Node;
-struct IGraph;
-struct IGraphEditor;
-
-template <typename Extractor, typename Value, typename Data, typename Context>
-concept IsExtratable = requires(const Context& ctx, const Data& data) {
-    { Extractor::get(ctx, data) } -> std::same_as<Value>;
-};
-
-template <typename Container, typename Idx, typename Data>
-concept IsIndexable =
-    requires(const Context& ctx, const Data& data, size_t idx) {
-        { Extractor::get(ctx, data) } -> std::same_as<Value>;
-    };
-
-template <typename Extractor, typename Value, typename Data, typename Context>
-struct GraphIterator {
-   private:
-    const Context* ctx;
-    const Data** ptr;
-
-   public:
-    using iterator_category = std::random_access_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = Value;
-    using pointer           = Value*;
-    using reference         = Value&;
-
-    GraphIterator() = default;
-
-    GraphIterator(Context* ctx, std::vector<Data*>* data)
-        : ctx{ctx}, ptr{data} {}
-
-    ~GraphIterator() = default;
-
-    [[nodiscard]] inline auto operator[](difference_type i) const
-        -> value_type {
-        return Extractor::get(*ctx, *ptr[i]);
-    }
-
-    auto operator*() const -> value_type { return *this[0]; }
-
-    // Pre-increment
-    auto operator++() -> GraphIterator& {
-        ++ptr;
-        return *this;
-    }
-
-    // Post-increment
-    auto operator++(int) -> GraphIterator {
-        auto temp = *this;
-        ++(*this);
-        return temp;
-    }
-
-    auto operator--() -> GraphIterator& {
-        --ptr;
-        return *this;
-    }
-
-    // Post-increment
-    auto operator--(int) -> GraphIterator {
-        auto temp = *this;
-        --(*this);
-        return temp;
-    }
-
-    auto operator+=(difference_type n) -> GraphIterator& {
-        ptr += n;
-        return *this;
-    }
-
-    auto operator-=(difference_type n) -> GraphIterator& {
-        ptr -= n;
-        return *this;
-    }
-
-    [[nodiscard]] auto operator+(difference_type n) const -> GraphIterator {
-        return GraphIterator(ctx, ptr + n);
-    }
-
-    [[nodiscard]] auto operator-(difference_type n) const -> GraphIterator {
-        return GraphIterator(ctx, ptr - n);
-    }
-
-    [[nodiscard]] auto operator-(const GraphIterator& other) const
-        -> difference_type {
-        return ptr - other.idx;
-    }
-
-    friend inline auto operator+(difference_type lhs,
-                                 const GraphIterator& rhs) -> GraphIterator {
-        return GraphIterator(rhs.ctx, lhs + rhs.ptr);
-    }
-    friend inline auto operator-(difference_type lhs,
-                                 const GraphIterator& rhs) -> GraphIterator {
-        return GraphIterator(rhs.ctx, lhs - rhs.ptr);
-    }
-
-    [[nodiscard]] auto operator<=>(const GraphIterator& other) const {
-        return ptr <=> other.ptr;
-    }
-
-    [[nodiscard]] auto operator==(const GraphIterator& other) const -> bool {
-        return ptr == other.ptr;
-    }
-};
-
-template <typename Extractor, typename Value, typename Data, typename Context>
-struct GraphArray {
-    using iterator = GraphIterator<Extractor, Value, Data, Context>;
-
-    const Context& ctx;
-    const std::vector<Data*>& data;
-
-    size_t first_idx;
-    size_t last_idx;
-
-    GraphArray(const Context& ctx, const std::vector<Data*>& data)
-        : GraphArray(&ctx, &data, 0, 0, data.size()) {}
-
-    GraphArray(const Context& ctx,
-               const std::vector<Data*>& data,
-               size_t first_idx)
-        : GraphArray(&ctx, &data, 0, first_idx, data.size()) {}
-
-    GraphArray(const Context& ctx,
-               const std::vector<Data*>& data,
-               size_t first_idx,
-               size_t last_idx)
-        : ctx{ctx}, data{data}, first_idx{first_idx}, last_idx{last_idx} {}
-
-    auto begin() -> iterator { return iterator{ctx, data.begin() + first_idx}; }
-    auto end() -> iterator { return iterator{ctx, data.begin() + last_idx}; }
-};
-
-struct Unit {};
-
-struct EdgeExtractor {
-    [[nodiscard]] inline static auto get(const Unit& _,
-                                         const EdgeData& data) -> Edge;
-};
-using EdgeIterator = GraphArray<EdgeExtractor, Edge, EdgeData, Unit>;
-
-struct ChildExtractor {
-    [[nodiscard]] inline static auto get(const Unit&,
-                                         const EdgeData& data) -> Node;
-};
-using ChildNodeIterator = GraphArray<ChildExtractor, Node, EdgeData, Unit>;
-
-struct ParentExtractor {
-    [[nodiscard]] inline static auto get(const Unit&,
-                                         const EdgeData& data) -> Node;
-};
-using ParentNodeIterator = GraphArray<ParentExtractor, Node, EdgeData, Unit>;
-
-struct NeighborExtractor {
-    [[nodiscard]] inline static auto get(const Node& self,
-                                         const EdgeData& data) -> Node;
-};
-using NeighborNodeIterator =
-    GraphArray<NeighborExtractor, Node, EdgeData, Node>;
 
 struct Node : public Identifiable<NodeTag> {
     // NOLINTNEXTLINE(google-explicit-constructor)
@@ -277,22 +127,22 @@ struct Node : public Identifiable<NodeTag> {
     ~Node() override = default;
 
     [[nodiscard]] auto id() const -> NodeId final;
-    [[nodiscard]] auto edges() const -> EdgeIterator;
 
-    [[nodiscard]] auto child_edges() const -> EdgeIterator;
-    [[nodiscard]] auto parent_edges() const -> EdgeIterator;
+    [[nodiscard]] auto edges() const -> std::generator<Edge>;
 
-    [[nodiscard]] auto child_nodes() const -> ChildNodeIterator;
-    [[nodiscard]] auto parent_nodes() const -> ParentNodeIterator;
-    [[nodiscard]] auto neighbors() const -> NeighborNodeIterator;
+    [[nodiscard]] auto child_edges() const -> std::generator<Edge>;
+
+    [[nodiscard]] auto parent_edges() const -> std::generator<Edge>;
+
+    [[nodiscard]] auto neighbors() const -> std::generator<Node>;
+
+    [[nodiscard]] auto child_nodes() const -> std::generator<Node>;
+
+    [[nodiscard]] auto parent_nodes() const -> std::generator<Node>;
 
    private:
     const NodeData* n_;
 };
-
-static_assert(std::random_access_iterator<ChildNodeIterator::iterator>);
-static_assert(std::random_access_iterator<ParentNodeIterator::iterator>);
-static_assert(std::random_access_iterator<NeighborNodeIterator::iterator>);
 
 struct Edge : public Identifiable<EdgeTag> {
     // NOLINTNEXTLINE(google-explicit-constructor)
@@ -309,7 +159,6 @@ struct Edge : public Identifiable<EdgeTag> {
    private:
     const EdgeData* e_;
 };
-static_assert(std::random_access_iterator<EdgeIterator::iterator>);
 
 /// @brief An interface for a graph
 struct IGraph {
@@ -319,10 +168,10 @@ struct IGraph {
     [[nodiscard]] virtual auto root() const -> Node = 0;
 
     /// @brief The nodes in this graph
-    [[nodiscard]] virtual auto nodes() const -> std::vector<Node> = 0;
+    [[nodiscard]] virtual auto nodes() const -> std::generator<Node> = 0;
 
     /// @brief The edges in this graph
-    [[nodiscard]] virtual auto edges() const -> std::vector<Edge> = 0;
+    [[nodiscard]] virtual auto edges() const -> std::generator<Edge> = 0;
 
     /// @brief Turns a NodeId into a Node
     [[nodiscard]] virtual auto get_node(NodeId id) const -> Node = 0;

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <ranges>
 #include <stack>
 #include "triskel/graph/igraph.hpp"
 
@@ -57,10 +58,10 @@ struct Graph : public IGraph {
     [[nodiscard]] auto root() const -> Node override;
 
     /// @brief The nodes in this graph
-    [[nodiscard]] auto nodes() const -> std::vector<Node> override;
+    [[nodiscard]] auto nodes() const -> std::generator<Node> override;
 
     /// @brief The edges in this graph
-    [[nodiscard]] auto edges() const -> std::vector<Edge> override;
+    [[nodiscard]] auto edges() const -> std::generator<Edge> override;
 
     /// @brief Turns a NodeId into a Node
     [[nodiscard]] auto get_node(NodeId id) const -> Node override;

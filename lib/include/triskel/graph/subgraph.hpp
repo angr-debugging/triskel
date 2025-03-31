@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
 
@@ -14,10 +12,10 @@ struct SubGraphEditor : public IGraphEditor {
     explicit SubGraphEditor(SubGraph& g);
 
     /// @brief Adds a node from the graph to the subgraph
-    void select_node(NodeId node);
+    void select_node(NodeId id);
 
     /// @brief Removes a node from the subgraph
-    void unselect_node(NodeId node);
+    void unselect_node(NodeId id);
 
     /// @brief Make root
     void make_root(NodeId node);
@@ -32,8 +30,11 @@ struct SubGraphEditor : public IGraphEditor {
     void commit() override;
 
    private:
-    SubGraph& g_;
-    GraphEditor& editor_;
+    SubGraph& sg_;
+    IGraphEditor& editor_;
+
+    /// @brief Add an edge to the subgraph
+    void select_edge(const Edge& edge);
 
     /// @brief Add a node's edges to the subgraph
     void select_edges(NodeId node);
@@ -49,12 +50,13 @@ struct SubGraphEditor : public IGraphEditor {
 };
 
 /// @brief A graph that contains only some nodes of another graph
-struct SubGraph : public IGraph {
+struct SubGraph : public Graph {
     explicit SubGraph(Graph& g);
 
+    /// @brief The root of this graph
     [[nodiscard]] auto root() const -> Node override;
-    [[nodiscard]] auto nodes() const -> std::vector<Node> override;
-    [[nodiscard]] auto edges() const -> std::vector<Edge> override;
+    [[nodiscard]] auto nodes() const -> std::generator<Node> override;
+    [[nodiscard]] auto edges() const -> std::generator<Edge> override;
     [[nodiscard]] auto get_node(NodeId id) const -> Node override;
     [[nodiscard]] auto get_edge(EdgeId id) const -> Edge override;
     [[nodiscard]] auto max_node_id() const -> size_t override;
@@ -67,11 +69,11 @@ struct SubGraph : public IGraph {
     [[nodiscard]] auto contains(EdgeId edge) -> bool;
 
    private:
-    Graph& g_;
+    IGraph& g_;
 
     NodeId root_;
-    std::vector<NodeId> nodes_;
-    std::vector<EdgeId> edges_;
+    NodeMap nodes_;
+    EdgeMap edges_;
 
     SubGraphEditor editor_;
 

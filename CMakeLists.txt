@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.30 FATAL_ERROR)
 
 include(CMakeDependentOption)
 include(FetchContent)
@@ -6,8 +6,7 @@ include(FetchContent)
 project(Triskel)
 
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(ENABLE_LLVM      "Adds utilities to convert LLVM functions to triskel graphs"    OFF)

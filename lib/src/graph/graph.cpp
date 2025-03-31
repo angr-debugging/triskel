@@ -6,33 +6,11 @@
 #include <memory>
 #include <stack>
 #include <unordered_map>
-#include <vector>
 
 #include "triskel/graph/igraph.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
-
-namespace {
-
-/// @brief Adds an edge to each of its nodes
-void link_edge(EdgeData& edge) {
-    // Child edges go in the back
-    edge.from->edges.push_back(&edge);
-
-    // Parent edges go in the front
-    edge.to->edges.insert(edge.to->edges.begin(), &edge);
-    edge.to->separator++;
-}
-
-/// @brief Removes an edge from each of its nodes
-void unlink_edge(EdgeData& edge) {
-    std::erase(edge.from->edges, &edge);
-    std::erase(edge.to->edges, &edge);
-    edge.to->separator--;
-}
-
-}  // namespace
 
 // =============================================================================
 // GraphEditor
@@ -81,7 +59,7 @@ auto GraphEditor::make_edge(EdgeId id, NodeId from, NodeId to) -> EdgeData& {
     edge.from = g_.data_.nodes[from].get();
     edge.to   = g_.data_.nodes[to].get();
 
-    link_edge(edge);
+    edge.link();
 
     return edge;
 }
@@ -99,7 +77,7 @@ void GraphEditor::remove_edge(EdgeId id) {
     auto edge = std::move(g_.data_.edges[id]);
     g_.data_.edges.erase(id);
 
-    unlink_edge(*edge);
+    edge->unlink();
 
     frame().deleted_edges.push(std::move(edge));
 }
@@ -108,7 +86,7 @@ void GraphEditor::edit_edge(EdgeId id, NodeId new_from, NodeId new_to) {
     // Delete the old edge
     {
         auto edge = std::move(g_.data_.edges[id]);
-        unlink_edge(*edge);
+        edge->unlink();
         frame().modified_edges.push(std::move(edge));
     }
 
@@ -137,9 +115,9 @@ void GraphEditor::pop() {
         f.modified_edges.pop();
 
         auto& new_edge = g_.data_.edges[old_edge->id];
-        unlink_edge(*new_edge);
+        new_edge->unlink();
 
-        link_edge(*old_edge);
+        old_edge->link();
         g_.data_.edges[old_edge->id] = std::move(old_edge);
     }
 
@@ -147,7 +125,7 @@ void GraphEditor::pop() {
     while (!f.deleted_edges.empty()) {
         auto edge = std::move(f.deleted_edges.top());
         f.deleted_edges.pop();
-        link_edge(*edge);
+        edge->link();
         g_.data_.edges[edge->id] = std::move(edge);
     }
 
@@ -161,7 +139,7 @@ void GraphEditor::pop() {
     for (size_t i = 0; i < f.created_edges_count; ++i) {
         next_edge_id_--;
         const auto id = EdgeId{next_edge_id_};
-        unlink_edge(*g_.data_.edges[id]);
+        g_.data_.edges[id]->unlink();
         g_.data_.edges.erase(id);
     }
 
@@ -192,12 +170,16 @@ auto Graph::root() const -> Node {
     return get_node(data_.root);
 }
 
-auto Graph::nodes() const -> std::vector<Node> {
-    return data_.nodes;
+auto Graph::nodes() const -> std::generator<Node> {
+    for (const auto& node : data_.nodes) {
+        co_yield Node{*node.second};
+    }
 }
 
-auto Graph::edges() const -> std::vector<Edge> {
-    return data_.edges;
+auto Graph::edges() const -> std::generator<Edge> {
+    for (const auto& edge : data_.edges) {
+        co_yield Edge{*edge.second};
+    }
 }
 
 auto Graph::get_node(NodeId id) const -> Node {
