@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
-#include <ranges>
 #include <vector>
 
 #include <fmt/core.h>
@@ -22,29 +21,29 @@ SubGraphEditor::SubGraphEditor(SubGraph& sg)
 
 void SubGraphEditor::select_node(NodeId id) {
     if (!sg_.contains(id)) {
-        sg_.nodes_[id] = std::make_unique<NodeData>(id);
+        sg_.data_.nodes[id] = std::make_unique<NodeData>(id);
     }
 
     select_edges(id);
 
-    if (sg_.root_ == NodeId::InvalidID) {
+    if (sg_.data_.root == NodeId::InvalidID) {
         make_root(id);
     }
 }
 
 void SubGraphEditor::unselect_node(NodeId id) {
     if (sg_.contains(id)) {
-        sg_.nodes_[id] = std::make_unique<NodeData>(id);
+        sg_.data_.nodes[id] = std::make_unique<NodeData>(id);
     }
 }
 
 void SubGraphEditor::select_edge(const Edge& g_edge) {
-    sg_.edges_[g_edge] = std::make_unique<EdgeData>(g_edge);
+    sg_.data_.edges[g_edge] = std::make_unique<EdgeData>(g_edge);
 
-    auto& sg_edge = sg_.edges_[g_edge];
+    auto& sg_edge = sg_.data_.edges[g_edge];
 
-    sg_edge->to   = sg_.nodes_[g_edge.to()].get();
-    sg_edge->from = sg_.nodes_[g_edge.from()].get();
+    sg_edge->to   = sg_.data_.nodes[g_edge.to()].get();
+    sg_edge->from = sg_.data_.nodes[g_edge.from()].get();
 
     sg_edge->link();
 }
@@ -66,13 +65,13 @@ void SubGraphEditor::unselect_edges(NodeId node) {
 
     for (const auto& edge : n.edges()) {
         if (sg_.contains(edge.other(node))) {
-            sg_.edges_.erase(edge);
+            sg_.data_.edges.erase(edge);
         }
     }
 }
 
 void SubGraphEditor::make_root(NodeId node) {
-    sg_.root_ = node;
+    sg_.data_.root = node;
 }
 
 auto SubGraphEditor::make_node() -> Node {
@@ -97,7 +96,7 @@ auto SubGraphEditor::make_edge(NodeId from, NodeId to) -> Edge {
 
 void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
     assert(sg_.contains(new_from) && sg_.contains(new_to));
-    sg_.edges_.erase(edge);
+    sg_.data_.edges.erase(edge);
 
     editor_.edit_edge(edge, new_from, new_to);
 
@@ -105,7 +104,6 @@ void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
 }
 
 void SubGraphEditor::remove_edge(EdgeId edge) {
-    assert_present(edge);
     editor_.remove_edge(edge);
 }
 
@@ -118,10 +116,10 @@ void SubGraphEditor::pop() {
     editor_.pop();
 
     auto node_ids = std::vector<NodeId>{};
-    node_ids.reserve(sg_.nodes_.size());
+    node_ids.reserve(sg_.data_.nodes.size());
 
     auto edge_ids = std::vector<EdgeId>{};
-    edge_ids.reserve(sg_.edges_.size());
+    edge_ids.reserve(sg_.data_.edges.size());
 
     for (const auto& node : sg_.nodes()) {
         node_ids.push_back(node);
@@ -139,32 +137,7 @@ void SubGraphEditor::commit() {
 // =============================================================================
 // Subgraph
 // =============================================================================
-SubGraph::SubGraph(Graph& g)
-    : root_{NodeId::InvalidID}, g_{g}, editor_{*this} {}
-
-auto SubGraph::root() const -> Node {
-    return get_node(root_);
-}
-
-auto SubGraph::nodes() const -> std::generator<Node> {
-    for (const auto& node : data_.nodes) {
-        co_yield Node{*node.second};
-    }
-}
-
-auto SubGraph::edges() const -> std::generator<Edge> {
-    for (const auto& edge : data_.edges) {
-        co_yield Edge{*edge.second};
-    }
-}
-
-auto SubGraph::get_node(NodeId id) const -> Node {
-    return Node{*nodes_.at(id)};
-}
-
-auto SubGraph::get_edge(EdgeId id) const -> Edge {
-    return Edge{*edges_.at(id)};
-}
+SubGraph::SubGraph(Graph& g) : g_{g}, editor_{*this} {}
 
 auto SubGraph::max_node_id() const -> size_t {
     return g_.max_node_id();
@@ -174,22 +147,14 @@ auto SubGraph::max_edge_id() const -> size_t {
     return g_.max_edge_id();
 }
 
-auto SubGraph::node_count() const -> size_t {
-    return nodes_.size();
-}
-
-auto SubGraph::edge_count() const -> size_t {
-    return edges_.size();
-}
-
 auto SubGraph::editor() -> SubGraphEditor& {
     return editor_;
 }
 
 auto SubGraph::contains(NodeId node) -> bool {
-    return nodes_.contains(node);
+    return data_.nodes.contains(node);
 }
 
 auto SubGraph::contains(EdgeId edge) -> bool {
-    return edges_.contains(edge);
+    return data_.edges.contains(edge);
 }

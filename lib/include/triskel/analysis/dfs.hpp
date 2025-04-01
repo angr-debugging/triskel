@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <generator>
 #include <vector>
 
 #include "triskel/analysis/patriarchal.hpp"
@@ -19,7 +20,7 @@ struct DFSAnalysis : public Patriarchal {
     ~DFSAnalysis() override = default;
 
     /// @brief Returns the graph nodes in DFS order
-    auto nodes() -> std::vector<Node>;
+    auto nodes() -> std::generator<Node>;
 
     /// @brief Is an edge a back edge
     auto is_backedge(EdgeId e) const -> bool;

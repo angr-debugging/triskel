@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <generator>
 #include <vector>
 
 #include "triskel/analysis/patriarchal.hpp"
@@ -17,7 +18,7 @@ struct UnorderedDFSAnalysis : public Patriarchal {
     ~UnorderedDFSAnalysis() override = default;
 
     /// @brief Returns the graph nodes in DFS order
-    auto nodes() -> std::vector<Node>;
+    auto nodes() -> std::generator<Node>;
 
     /// @brief Is an edge a back edge
     /// In an unordered graph, a backedge is a ?

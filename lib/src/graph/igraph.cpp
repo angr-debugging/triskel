@@ -41,6 +41,18 @@ auto Node::id() const -> NodeId {
     return n_->id;
 }
 
+auto Node::neighbor_count() const -> size_t {
+    return n_->edges.size();
+}
+
+auto Node::children_count() const -> size_t {
+    return n_->edges.size() - n_->separator;
+}
+
+auto Node::parent_count() const -> size_t {
+    return n_->separator;
+}
+
 auto Node::edges() const -> std::generator<Edge> {
     for (const auto* edge : n_->edges) {
         co_yield Edge{*edge};

@@ -7,7 +7,6 @@
 #include <deque>
 #include <limits>
 #include <memory>
-#include <stdexcept>
 #include <vector>
 
 #include <fmt/base.h>
@@ -53,14 +52,12 @@ auto SpanningTree::leave_edge() -> EdgeId {
 }
 
 void SpanningTree::init_rank() {
-    const auto nodes = g.nodes();
-
     ranks_[g.root()]   = 0;
     size_t found_nodes = 1;
     size_t rank        = 1;
 
-    while (found_nodes < nodes.size()) {
-        for (const auto& node : nodes) {
+    while (found_nodes < g.node_count()) {
+        for (const auto& node : g.nodes()) {
             if (ranks_.get(node) < rank) {
                 continue;
             }

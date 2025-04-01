@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <map>
-#include <stdexcept>
 #include <string>
 
 #include <llvm/IR/BasicBlock.h>
@@ -38,8 +37,8 @@ auto truncate_str(const std::string& str,
 
 }  // namespace
 
-auto triskel::to_string(const llvm::Value& v,
-                        llvm::ModuleSlotTracker* MST) -> std::string {
+auto triskel::to_string(const llvm::Value& v, llvm::ModuleSlotTracker* MST)
+    -> std::string {
     std::string s;
     ::llvm::raw_string_ostream os{s};
     if (MST != nullptr) {

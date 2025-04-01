@@ -1,4 +1,5 @@
 /// An Explanation of Lengauer-Tarjan Dominators Algorithm, Jayadev Misra
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <set>
@@ -9,6 +10,7 @@
 #include "triskel/analysis/dfs.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/attribute.hpp"
+#include "triskel/utils/generator.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
@@ -80,7 +82,7 @@ struct Forest {
 auto triskel::make_idoms(const IGraph& g) -> NodeAttribute<NodeId> {
     auto dfs = DFSAnalysis(g);
 
-    auto nodes = dfs.nodes();
+    auto nodes = gen_to_v(dfs.nodes(), g.node_count());
     // TODO: remove root
 
     // Immediate Dominator

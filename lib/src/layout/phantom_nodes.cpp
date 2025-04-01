@@ -28,8 +28,8 @@ namespace {
 
 using DFSNums = NodeAttribute<std::vector<size_t>>;
 
-auto starts_with(const std::span<size_t>& vec,
-                 const std::span<size_t>& prefix) -> bool {
+auto starts_with(const std::span<size_t>& vec, const std::span<size_t>& prefix)
+    -> bool {
     return vec.size() >= prefix.size() &&
            std::equal(prefix.begin(), prefix.end(), vec.begin());
 }
@@ -181,7 +181,7 @@ struct RTree {
 };
 
 // Split the entry edges using a radix tree
-void split_node(IGraph& graph, Node& node, DFSNums& keys) {
+void split_node(IGraph& graph, const Node& node, DFSNums& keys) {
     auto& editor = graph.editor();
     auto rtree   = RTree{};
 
@@ -254,22 +254,21 @@ auto make_keys(NodeId root,
 void triskel::create_phantom_nodes(IGraph& g) {
     auto idoms = make_idoms(g);
 
-    const auto& nodes = g.nodes();
-    auto keys         = NodeAttribute<std::vector<size_t>>{nodes.size(), {}};
+    auto keys = NodeAttribute<std::vector<size_t>>{g, {}};
 
-    for (const auto& node : nodes) {
+    for (const auto& node : g.nodes()) {
         make_keys(g.root(), keys, idoms, node);
     }
 
     auto& editor = g.editor();
 
-    for (auto& node : g.nodes()) {
-        if (node.parent_nodes().size() >= 3) {
+    for (const auto& node : g.nodes()) {
+        if (node.parent_count() >= 3) {
             split_node(g, node, keys);
             continue;
         }
 
-        if (node.child_edges().size() > 1 && node.parent_edges().size() > 1) {
+        if (node.children_count() > 1 && node.parent_count() > 1) {
             // Create a single parent for this node
             auto parent = editor.make_node();
 

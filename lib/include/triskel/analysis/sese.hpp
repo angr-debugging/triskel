@@ -71,7 +71,8 @@ struct SESE {
     /// @brief Calculates hi2
     [[nodiscard]] auto get_hi2(const Node& node, size_t hi1) -> size_t;
 
-    void create_capping_backedge(const Node& node,
+    void create_capping_backedge(const std::vector<Node>& nodes,
+                                 const Node& node,
                                  BracketList& blist,
                                  size_t hi2);
 

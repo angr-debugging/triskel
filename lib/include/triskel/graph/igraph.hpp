@@ -128,6 +128,12 @@ struct Node : public Identifiable<NodeTag> {
 
     [[nodiscard]] auto id() const -> NodeId final;
 
+    [[nodiscard]] auto children_count() const -> size_t;
+
+    [[nodiscard]] auto parent_count() const -> size_t;
+
+    [[nodiscard]] auto neighbor_count() const -> size_t;
+
     [[nodiscard]] auto edges() const -> std::generator<Edge>;
 
     [[nodiscard]] auto child_edges() const -> std::generator<Edge>;
@@ -150,8 +156,8 @@ struct Edge : public Identifiable<EdgeTag> {
     ~Edge() override = default;
 
     [[nodiscard]] auto id() const -> EdgeId final;
-    [[nodiscard]] inline auto from() const -> Node;
-    [[nodiscard]] inline auto to() const -> Node;
+    [[nodiscard]] auto from() const -> Node;
+    [[nodiscard]] auto to() const -> Node;
 
     /// @brief Returns the other side of the edge
     [[nodiscard]] auto other(NodeId n) const -> Node;

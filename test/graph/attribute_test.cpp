@@ -9,8 +9,8 @@ using namespace triskel;
 // The graph from the wikipedia example
 // https://en.wikipedia.org/wiki/Depth-first_search#Output_of_a_depth-first_search
 #define GRAPH1                        \
-    auto g  = Graph{};                \
-    auto ge = g.editor();             \
+    auto g   = Graph{};               \
+    auto& ge = g.editor();            \
     ge.push();                        \
                                       \
     auto n1 = ge.make_node();         \

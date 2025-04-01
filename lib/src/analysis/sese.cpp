@@ -13,8 +13,8 @@
 #include "triskel/analysis/udfs.hpp"
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
-#include "triskel/layout/phantom_nodes.hpp"
 #include "triskel/utils/attribute.hpp"
+#include "triskel/utils/generator.hpp"
 #include "triskel/utils/tree.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
@@ -82,7 +82,8 @@ SESE::SESE(Graph& g)
 
     udfs_ = std::make_unique<UnorderedDFSAnalysis>(g);
 
-    for (const auto& n : udfs_->nodes() | std::views::reverse) {
+    const auto nodes = gen_to_v(udfs_->nodes(), g.node_count());
+    for (const auto& n : nodes | std::views::reverse) {
         const size_t hi0 = get_hi0(n);
         const size_t hi1 = get_hi1(n);
         his_.set(n, std::min(hi0, hi1));
@@ -121,10 +122,10 @@ SESE::SESE(Graph& g)
         }
 
         if (hi2 < hi0) {
-            create_capping_backedge(n, blist, hi2);
+            create_capping_backedge(nodes, n, blist, hi2);
         }
 
-        if (!n.is_root()) {
+        if (n != g.root()) {
             determine_class(n, blist);
         }
     }
@@ -183,7 +184,7 @@ void SESE::preprocess_graph() {
         auto exit = ge.make_node();
 
         for (const auto& node : g_.nodes()) {
-            if (node.child_nodes().empty() && node != exit) {
+            if (node.children_count() == 0 && node != exit) {
                 ge.make_edge(node, exit);
                 reaches_exit_backwards(visited, visited_count, node);
             }
@@ -195,7 +196,7 @@ void SESE::preprocess_graph() {
             reaches_exit_backwards(visited, visited_count, sink);
         }
 
-        assert(!exit.parent_nodes().empty());
+        assert(exit.parent_count() != 0);
         ge.make_edge(exit, g_.root());
     }
 }
@@ -226,7 +227,7 @@ auto SESE::get_hi1(const Node& node) -> size_t {
     for (const auto& b : node.edges()) {
         const auto& child = b.other(node);
 
-        if ((!udfs_->parents(child).empty()) &&
+        if ((udfs_->parent_count(child) != 0) &&
             (udfs_->parent(child) == node)) {
             hi1 = std::min(hi1, his_.get(child));
         }
@@ -245,7 +246,7 @@ auto SESE::get_hi2(const Node& node, size_t hi1) -> size_t {
     for (const auto& b : node.edges()) {
         const auto& child = b.other(node);
 
-        if ((!udfs_->parents(child).empty()) &&
+        if ((udfs_->parent_count(child) != 0) &&
             (udfs_->parent(child) == node)) {
             const auto hi = his_.get(child);
             if (!skipped_one && hi == hi1) {
@@ -259,11 +260,12 @@ auto SESE::get_hi2(const Node& node, size_t hi1) -> size_t {
     return hi2;
 }
 
-void SESE::create_capping_backedge(const Node& node,
+void SESE::create_capping_backedge(const std::vector<Node>& nodes,
+                                   const Node& node,
                                    BracketList& blist,
                                    size_t hi2) {
     auto& ge     = g_.editor();
-    const auto d = ge.make_edge(node, udfs_->nodes()[hi2]);
+    const auto d = ge.make_edge(node, nodes[hi2]);
     udfs_->set_backedge(d);
     capping_backedges_.push_back(d.id());
     bl::push(blist, d.id());

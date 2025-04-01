@@ -1,6 +1,7 @@
 #include "triskel/analysis/udfs.hpp"
 
 #include <cstddef>
+#include <generator>
 #include <vector>
 
 #include "triskel/analysis/patriarchal.hpp"
@@ -44,11 +45,13 @@ void UDFS::udfs(const Node& node) {
 }
 
 auto UDFS::was_visited(const Node& node) -> bool {
-    return (dfs_nums_.get(node) != 0) || (node.is_root());
+    return (dfs_nums_.get(node) != 0) || (node == g_.root());
 }
 
-auto UDFS::nodes() -> std::vector<Node> {
-    return g_.get_nodes(nodes_);
+auto UDFS::nodes() -> std::generator<Node> {
+    for (const auto& node : nodes_) {
+        co_yield g_.get_node(node);
+    }
 }
 
 auto UDFS::is_tree(const Edge& e) -> bool {

@@ -1,5 +1,5 @@
-#include "triskel/layout/sugiyama/layer_assignement.hpp"
 #include "triskel/layout/sugiyama/sugiyama.hpp"
+#include "triskel/layout/sugiyama/layer_assignement.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -22,6 +22,7 @@
 #include "triskel/layout/sugiyama/vertex_ordering.hpp"
 #include "triskel/utils/attribute.hpp"
 #include "triskel/utils/constants.hpp"
+#include "triskel/utils/generator.hpp"
 #include "triskel/utils/point.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
@@ -206,12 +207,11 @@ void SugiyamaAnalysis::draw_self_loops() {
         const auto x = xs_.get(node);
         auto& y      = ys_.get(node);
 
-        auto top_x =
-            x + (width / static_cast<float>(node.parent_edges().size() + 1) *
-                 static_cast<float>(node.parent_edges().size()));
+        auto top_x = x + (width / static_cast<float>(node.parent_count() + 1) *
+                          static_cast<float>(node.parent_count()));
         auto bottom_x =
-            x + (width / static_cast<float>(node.child_edges().size() + 1) *
-                 static_cast<float>(node.child_edges().size()));
+            x + (width / static_cast<float>(node.children_count() + 1) *
+                 static_cast<float>(node.children_count()));
 
         waypoints_.set(
             edge, {{.x = bottom_x, .y = y + height},
@@ -637,7 +637,7 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
                 std::max(layer_height,
                          heights_.get(node) + paddings_.get(node).height());
             layer_gap +=
-                static_cast<float>(node.child_edges().size()) * EDGE_HEIGHT;
+                static_cast<float>(node.children_count()) * EDGE_HEIGHT;
         }
 
         if (layer_gap == 2.0F * Y_GUTTER) {
@@ -733,7 +733,8 @@ void SugiyamaAnalysis::waypoint_creation() {
             auto y0 = ys_.get(node) + heights_.get(node);
 
             // Sort the edges by destination order
-            auto edges = node.child_edges();
+            // FIXME: vector
+            auto edges = gen_to_v(node.child_edges(), node.children_count());
             std::ranges::sort(edges, [&](const Edge& a, const Edge& b) {
                 auto order_a = orders_.get(a.to());
                 auto order_b = orders_.get(b.to());
@@ -784,7 +785,8 @@ void SugiyamaAnalysis::waypoint_creation() {
 
         // ENTRY EDGES
         for (const auto& node : nodes) {
-            auto edges = node.parent_edges();
+            auto edges = gen_to_v(node.parent_edges(), node.parent_count());
+            // FIXME: vector
             std::ranges::sort(edges, [&](const Edge& a, const Edge& b) {
                 auto order_a = orders_.get(a.from());
                 auto order_b = orders_.get(b.from());
@@ -1022,7 +1024,7 @@ void SugiyamaAnalysis::y_coordinate_assignment() {
             ys_.set(node, y);
             layer_height = std::max(layer_height, heights_.get(node));
             layer_gap +=
-                static_cast<float>(node.child_edges().size()) * EDGE_HEIGHT;
+                static_cast<float>(node.children_count()) * EDGE_HEIGHT;
         }
 
         if (layer_gap == 2.0F * Y_GUTTER) {
@@ -1096,8 +1098,9 @@ void SugiyamaAnalysis::build_waypoints(EdgeId id) {
         return;
     }
 
-    for (const auto& edge : g.get_edges(edge_waypoints)) {
-        auto& ws = waypoints_.get(edge);
+    for (const auto& id : edge_waypoints) {
+        const auto& edge = g.get_edge(id);
+        auto& ws         = waypoints_.get(edge);
         if (layers_.get(edge.from()) < layers_.get(edge.to())) {
             waypoints.push_back(ws[0]);
             waypoints.push_back(ws[1]);

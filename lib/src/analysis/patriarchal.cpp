@@ -13,14 +13,11 @@ using namespace triskel;
 
 namespace {
 
-using Next = std::function<std::vector<Node>(const Node&)>;
+using Next = std::function<std::generator<Node>(NodeId)>;
 
-auto bfs(const IGraph& g,
-         const Next& next,
-         const Node& n1,
-         const Node& n2) -> bool {
+auto bfs(const IGraph& g, const Next& next, NodeId n1, NodeId n2) -> bool {
     auto visited = NodeAttribute<bool>{g.max_node_id(), false};
-    auto stack   = std::queue<NodeId>{{n1.id()}};
+    auto stack   = std::queue<NodeId>{{n1}};
 
     while (!stack.empty()) {
         const auto& n = g.get_node(stack.front());
@@ -41,7 +38,7 @@ auto bfs(const IGraph& g,
                 return true;
             }
 
-            stack.push(child.id());
+            stack.push(child);
         }
     }
 
@@ -52,42 +49,54 @@ auto bfs(const IGraph& g,
 Patriarchal::Patriarchal(const IGraph& g)
     : g_{g}, parents_{g.max_node_id(), {}}, children_{g.max_node_id(), {}} {}
 
-void Patriarchal::add_parent(const Node& parent, const Node& child) {
+void Patriarchal::add_parent(NodeId parent, NodeId child) {
     auto& parents  = parents_.get(child);
     auto& children = children_.get(parent);
 
-    parents.push_back(parent.id());
-    children.push_back(child.id());
+    parents.push_back(parent);
+    children.push_back(child);
 }
 
-auto Patriarchal::parents(const Node& n) -> std::vector<Node> {
-    return g_.get_nodes(parents_.get(n));
+auto Patriarchal::parent_count(NodeId n) -> size_t {
+    return parents_.get(n).size();
 }
 
-auto Patriarchal::parent(const Node& n) -> Node {
-    return g_.get_node(parent(n.id()));
+auto Patriarchal::parents(NodeId n) -> std::generator<Node> {
+    for (const auto& node : parents_.get(n)) {
+        co_yield (g_.get_node(node));
+    }
 }
 
-auto Patriarchal::parent(const NodeId& n) const -> NodeId {
+auto Patriarchal::parent_id(NodeId n) const -> NodeId {
     const auto& parents = parents_.get(n);
     assert(parents.size() == 1);
     return parents.front();
 }
 
-auto Patriarchal::children(const Node& n) -> std::vector<Node> {
-    return g_.get_nodes(children_.get(n));
+auto Patriarchal::parent(NodeId n) -> Node {
+    return g_.get_node(parent_id(n));
 }
 
-auto Patriarchal::child(const Node& n) -> Node {
+auto Patriarchal::children_count(NodeId n) -> size_t {
+    return children_.get(n).size();
+}
+
+auto Patriarchal::children(NodeId n) -> std::generator<Node> {
+    for (const auto& node : children_.get(n)) {
+        co_yield g_.get_node(node);
+    }
+}
+
+auto Patriarchal::child(NodeId n) -> Node {
     auto& children = children_.get(n);
     assert(children.size() == 1);
     return g_.get_node(children.front());
 }
 
-auto Patriarchal::precedes(const Node& n1, const Node& n2) -> bool {
-    return bfs(g_, [&](const Node& n) { return children(n); }, n1, n2);
+auto Patriarchal::precedes(NodeId n1, NodeId n2) -> bool {
+    return bfs(g_, [&](NodeId n) { return children(n); }, n1, n2);
 }
 
-auto Patriarchal::succeed(const Node& n1, const Node& n2) -> bool {
-    return bfs(g_, [&](const Node& n) { return parents(n); }, n1, n2);
+auto Patriarchal::succeed(NodeId n1, NodeId n2) -> bool {
+    return bfs(g_, [&](NodeId n) { return parents(n); }, n1, n2);
 }

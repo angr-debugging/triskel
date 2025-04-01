@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <memory>
 #include <stack>
+#include <stdexcept>
 #include <unordered_map>
 
 #include "triskel/graph/igraph.hpp"
@@ -102,7 +103,7 @@ auto GraphEditor::frame() -> Frame& {
 }
 
 void GraphEditor::push() {
-    frames.push(Frame{});
+    frames.emplace();
 }
 
 void GraphEditor::pop() {
@@ -162,9 +163,7 @@ void GraphEditor::commit() {
 // Graph
 // =============================================================================
 
-Graph::Graph()
-    : data_{.root = NodeId::InvalidID, .nodes = {}, .edges = {}},
-      editor_{*this} {}
+Graph::Graph() : data_{.root = NodeId::InvalidID}, editor_{*this} {}
 
 auto Graph::root() const -> Node {
     return get_node(data_.root);
@@ -208,6 +207,6 @@ auto Graph::edge_count() const -> size_t {
     return data_.edges.size();
 }
 
-auto Graph::editor() -> GraphEditor& {
+auto Graph::editor() -> IGraphEditor& {
     return editor_;
 }

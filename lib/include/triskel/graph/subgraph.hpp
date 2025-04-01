@@ -11,6 +11,8 @@ struct SubGraphEditor : public IGraphEditor {
     /// @brief A graph editor with source control
     explicit SubGraphEditor(SubGraph& g);
 
+    auto operator=(const SubGraphEditor&) -> SubGraphEditor& = delete;
+
     /// @brief Adds a node from the graph to the subgraph
     void select_node(NodeId id);
 
@@ -41,39 +43,31 @@ struct SubGraphEditor : public IGraphEditor {
 
     /// @brief Remove a node's edges to the subgraph
     void unselect_edges(NodeId node);
-
-    /// @brief Assert that an edge is in the subgraph
-    void assert_present(EdgeId edge);
-
-    /// @brief Assert that an edge is not the subgraph
-    void assert_missing(EdgeId edge);
 };
 
 /// @brief A graph that contains only some nodes of another graph
+// TODO: make an intersection of graph and subgraph that does not have the
+// editor
 struct SubGraph : public Graph {
     explicit SubGraph(Graph& g);
 
     /// @brief The root of this graph
-    [[nodiscard]] auto root() const -> Node override;
-    [[nodiscard]] auto nodes() const -> std::generator<Node> override;
-    [[nodiscard]] auto edges() const -> std::generator<Edge> override;
-    [[nodiscard]] auto get_node(NodeId id) const -> Node override;
-    [[nodiscard]] auto get_edge(EdgeId id) const -> Edge override;
-    [[nodiscard]] auto max_node_id() const -> size_t override;
-    [[nodiscard]] auto max_edge_id() const -> size_t override;
-    [[nodiscard]] auto node_count() const -> size_t override;
-    [[nodiscard]] auto edge_count() const -> size_t override;
     [[nodiscard]] auto editor() -> SubGraphEditor& override;
 
+    /// @brief Does this subgraph have this node
     [[nodiscard]] auto contains(NodeId node) -> bool;
+
+    /// @brief Does this subgraph have this edge
     [[nodiscard]] auto contains(EdgeId edge) -> bool;
+
+    /// @brief The greatest id in this graph
+    [[nodiscard]] auto max_node_id() const -> size_t override;
+
+    /// @brief The greatest id in this graph
+    [[nodiscard]] auto max_edge_id() const -> size_t override;
 
    private:
     IGraph& g_;
-
-    NodeId root_;
-    NodeMap nodes_;
-    EdgeMap edges_;
 
     SubGraphEditor editor_;
 

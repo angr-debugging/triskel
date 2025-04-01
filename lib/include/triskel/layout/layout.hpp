@@ -48,7 +48,7 @@ struct Layout : public ILayout {
     struct RegionData {
         explicit RegionData(Graph& g);
 
-        SubGraph subgraph;
+        std::unique_ptr<SubGraph> subgraph;
         NodeId node_id;
 
         std::vector<IOPair> entries;

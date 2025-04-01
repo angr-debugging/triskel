@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <ranges>
 #include <stack>
 #include "triskel/graph/igraph.hpp"
 
@@ -13,9 +12,12 @@ struct Graph;
 struct GraphEditor : public IGraphEditor {
     /// @brief A graph editor with source control
     explicit GraphEditor(Graph& g);
+    explicit GraphEditor(const GraphEditor&) = delete;
 
     /// @brief Debug tests
     ~GraphEditor() override;
+
+    auto operator=(const GraphEditor&) -> GraphEditor& = delete;
 
     auto make_node() -> Node override;
     void remove_node(NodeId id) override;
@@ -31,6 +33,8 @@ struct GraphEditor : public IGraphEditor {
     size_t next_edge_id_ = 0;
 
     struct Frame {
+        auto operator=(const Frame&) -> Frame& = delete;
+
         size_t created_nodes_count;
         std::stack<std::unique_ptr<NodeData>> deleted_nodes;
 
@@ -44,7 +48,6 @@ struct GraphEditor : public IGraphEditor {
     auto make_edge(EdgeId id, NodeId from, NodeId to) -> EdgeData&;
 
     Graph& g_;
-
     std::stack<Frame> frames;
 
     friend struct Graph;
@@ -82,14 +85,14 @@ struct Graph : public IGraph {
     [[nodiscard]] auto edge_count() const -> size_t override;
 
     /// @brief Gets the editor attached to this graph
-    [[nodiscard]] auto editor() -> GraphEditor& override;
+    [[nodiscard]] auto editor() -> IGraphEditor& override;
 
    private:
     GraphEditor editor_;
-
     GraphData data_;
 
     friend struct GraphEditor;
+    friend struct SubGraphEditor;
     friend struct SubGraph;
 };
 

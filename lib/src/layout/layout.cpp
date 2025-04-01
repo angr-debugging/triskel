@@ -133,7 +133,7 @@ void Layout::create_region_nodes() {
         }
 
         const auto& parent_region = r->parent();
-        auto& editor = regions_data_[parent_region.id].subgraph.editor();
+        auto& editor = regions_data_[parent_region.id].subgraph->editor();
         editor.select_node(regions_data_[r->id].node_id);
     }
 }
@@ -336,7 +336,7 @@ auto Layout::get_region_node(const SESE::SESERegion& r) const -> Node {
 }
 
 auto Layout::get_editor(const SESE::SESERegion& r) -> SubGraphEditor& {
-    return regions_data_[r.id].subgraph.editor();
+    return regions_data_[r.id].subgraph->editor();
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
@@ -357,10 +357,10 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
     }
 
     auto sugiyama =
-        SugiyamaAnalysis(region.subgraph, heights_, widths_, start_x_offset_,
+        SugiyamaAnalysis(*region.subgraph, heights_, widths_, start_x_offset_,
                          end_x_offset_, region.entries, region.exits);
 
-    for (const auto& node : region.subgraph.nodes()) {
+    for (const auto& node : region.subgraph->nodes()) {
         auto x = sugiyama.xs_.get(node);
         auto y = sugiyama.ys_.get(node);
 
@@ -369,7 +369,7 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
         ys_.set(node, y);
     }
 
-    for (const auto& edge : region.subgraph.edges()) {
+    for (const auto& edge : region.subgraph->edges()) {
         waypoints_.set(edge, sugiyama.waypoints_.get(edge));
     }
 
@@ -399,7 +399,7 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
 void Layout::translate_region(const SESE::SESERegion& r, const Point& v) {
     auto& region = regions_data_[r.id];
 
-    for (const auto& node : region.subgraph.nodes()) {
+    for (const auto& node : region.subgraph->nodes()) {
         auto node_x = Layout::get_x(node);
         auto node_y = Layout::get_y(node);
 
@@ -407,7 +407,7 @@ void Layout::translate_region(const SESE::SESERegion& r, const Point& v) {
         ys_.set(node, node_y + v.y);
     }
 
-    for (const auto& edge : region.subgraph.edges()) {
+    for (const auto& edge : region.subgraph->edges()) {
         auto& waypoints = waypoints_.get(edge);
 
         for (auto& waypoint : waypoints) {
@@ -438,4 +438,4 @@ void Layout::translate_region(const SESE::SESERegion& r) {
 }
 
 Layout::RegionData::RegionData(Graph& g)
-    : subgraph{g}, node_id{NodeId::InvalidID} {}
+    : subgraph{std::make_unique<SubGraph>(g)}, node_id{NodeId::InvalidID} {}

@@ -1,6 +1,7 @@
 #include "triskel/analysis/dfs.hpp"
 
 #include <cstddef>
+#include <generator>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,7 @@ DFS::DFSAnalysis(const IGraph& g)
 }
 
 auto DFS::was_visited(const Node& node) -> bool {
-    return (dfs_nums_.get(node) != 0) || node.is_root();
+    return (dfs_nums_.get(node) != 0) || node == g_.root();
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
@@ -73,8 +74,10 @@ void DFS::type_edges() {
     }
 }
 
-auto DFS::nodes() -> std::vector<Node> {
-    return g_.get_nodes(nodes_);
+auto DFS::nodes() -> std::generator<Node> {
+    for (const auto& node : nodes_) {
+        co_yield g_.get_node(node);
+    }
 }
 
 auto DFS::is_tree(EdgeId e) const -> bool {

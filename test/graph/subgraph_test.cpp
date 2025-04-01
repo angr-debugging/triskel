@@ -9,8 +9,8 @@
 using namespace triskel;
 
 #define GRAPH1                         \
-    auto gg  = Graph{};                \
-    auto gge = gg.editor();            \
+    auto gg   = Graph{};               \
+    auto& gge = gg.editor();           \
     gge.push();                        \
                                        \
     auto n1 = gge.make_node();         \

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/attribute.hpp"
