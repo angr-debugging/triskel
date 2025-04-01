@@ -1,5 +1,4 @@
 #include "triskel/analysis/sese.hpp"
-#include <fmt/base.h>
 
 #include <algorithm>
 #include <cassert>
@@ -143,6 +142,7 @@ SESE::SESE(Graph& g)
     construct_program_structure_tree(g.root(), &root_region, visited);
 }
 
+namespace {
 // One needs to exist!
 auto get_new_sink(const IGraph& g, const NodeAttribute<bool>& visited) -> Node {
     for (const auto& node : g.nodes()) {
@@ -161,13 +161,13 @@ void reaches_exit_backwards(NodeAttribute<bool>& visited,
     visited.set(node, true);
     visited_count += 1;
 
-    size_t children_count = 0;
     for (const auto& child : node.parent_nodes()) {
         if (!visited[child]) {
             reaches_exit_backwards(visited, visited_count, child);
         }
     }
 }
+}  // namespace
 
 void SESE::preprocess_graph() {
     // create_phantom_nodes(g_);

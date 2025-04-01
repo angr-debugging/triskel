@@ -1,5 +1,10 @@
-
 #include "triskel/graph/owning_graph.hpp"
+
+#include <cassert>
+#include <cstddef>
+#include <generator>
+
+#include "triskel/graph/igraph.hpp"
 
 using triskel::OwningGraph;
 

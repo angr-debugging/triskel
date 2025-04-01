@@ -1,18 +1,51 @@
 #include "triskel/graph/graph.hpp"
-#include <unistd.h>
 
 #include <cassert>
 #include <cstddef>
 #include <memory>
 #include <stack>
-#include <stdexcept>
 #include <unordered_map>
+#include <utility>
+#include <variant>
 
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/generator.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
+
+// =============================================================================
+// Changes
+// =============================================================================
+
+void GraphEditor::Frame::MakeNode::revert(GraphEditor& editor) {
+    editor.next_node_id_--;
+    editor.g_.data_.nodes.erase(id);
+}
+
+void GraphEditor::Frame::RemoveNode::revert(GraphEditor& editor) {
+    editor.g_.data_.nodes[node->id] = std::move(node);
+}
+
+void GraphEditor::Frame::AddEdge::revert(GraphEditor& editor) {
+    editor.next_edge_id_--;
+    auto& edge = editor.g_.data_.edges[id];
+    edge->unlink();
+    editor.g_.data_.edges.erase(id);
+}
+
+void GraphEditor::Frame::RemoveEdge::revert(GraphEditor& editor) {
+    edge->link();
+    editor.g_.data_.edges[edge->id] = std::move(edge);
+}
+
+void GraphEditor::Frame::ModifyEdge::revert(GraphEditor& editor) {
+    auto& new_edge = editor.g_.data_.edges[edge.id];
+    new_edge->unlink();
+
+    *new_edge = edge;
+    new_edge->link();
+}
 
 // =============================================================================
 // GraphEditor
@@ -34,7 +67,7 @@ auto GraphEditor::make_node() -> Node {
         g_.data_.root = id;
     }
 
-    frame().created_nodes_count += 1;
+    frame().changes.push(Frame::MakeNode(id));
     return g_.get_node(id);
 }
 
@@ -51,7 +84,7 @@ void GraphEditor::remove_node(NodeId id) {
 
     auto n = std::move(g_.data_.nodes[id]);
     g_.data_.nodes.erase(id);
-    frame().deleted_nodes.push(std::move(n));
+    frame().changes.push(Frame::RemoveNode(std::move(n)));
 }
 
 auto GraphEditor::make_edge(EdgeId id, NodeId from, NodeId to) -> EdgeData& {
@@ -72,7 +105,7 @@ auto GraphEditor::make_edge(NodeId from, NodeId to) -> Edge {
     ++next_edge_id_;
 
     auto& edge = make_edge(id, from, to);
-    frame().created_edges_count++;
+    frame().changes.push(Frame::AddEdge(id));
     return {edge};
 }
 
@@ -80,7 +113,7 @@ void GraphEditor::remove_edge(EdgeId id) {
     auto edge = std::move(g_.data_.edges[id]);
     edge->unlink();
 
-    frame().deleted_edges.push(std::move(edge));
+    frame().changes.push(Frame::RemoveEdge(std::move(edge)));
     g_.data_.edges.erase(id);
 }
 
@@ -89,7 +122,7 @@ void GraphEditor::edit_edge(EdgeId id, NodeId new_from, NodeId new_to) {
     edge->unlink();
 
     // Save the old edge
-    frame().modified_edges.push(*edge);
+    frame().changes.push(Frame::ModifyEdge(*edge));
 
     edge->from = g_.data_.nodes.at(new_from).get();
     edge->to   = g_.data_.nodes.at(new_to).get();
@@ -110,46 +143,10 @@ void GraphEditor::push() {
 void GraphEditor::pop() {
     auto& f = frames.top();
 
-    // The order here is important, otherwise we might modify deleted elements
-    // Revert edited edges
-    while (!f.modified_edges.empty()) {
-        auto old_edge = f.modified_edges.top();
-        f.modified_edges.pop();
-
-        auto& new_edge = g_.data_.edges[old_edge.id];
-        new_edge->unlink();
-
-        *new_edge = old_edge;
-        new_edge->link();
-    }
-
-    // Revert removed edges
-    while (!f.deleted_edges.empty()) {
-        auto edge = std::move(f.deleted_edges.top());
-        f.deleted_edges.pop();
-        edge->link();
-        g_.data_.edges[edge->id] = std::move(edge);
-    }
-
-    // Revert removed nodes
-    while (!f.deleted_nodes.empty()) {
-        auto node = std::move(f.deleted_nodes.top());
-        f.deleted_nodes.pop();
-        g_.data_.nodes[node->id] = std::move(node);
-    }
-
-    for (size_t i = 0; i < f.created_edges_count; ++i) {
-        next_edge_id_--;
-        const auto id = EdgeId{next_edge_id_};
-        g_.data_.edges[id]->unlink();
-        g_.data_.edges.erase(id);
-    }
-
-    // Revert created nodes
-    for (size_t i = 0; i < f.created_nodes_count; ++i) {
-        next_node_id_--;
-        const auto id = NodeId{next_node_id_};
-        g_.data_.nodes.erase(id);
+    while (!f.changes.empty()) {
+        auto& change = f.changes.top();
+        std::visit([this](auto& change) { change.revert(*this); }, change);
+        f.changes.pop();
     }
 
     frames.pop();

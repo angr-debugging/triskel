@@ -316,7 +316,7 @@ auto write_str_to_file(const std::string& path, const std::string& data) {
 }
 
 auto run_on_function(llvm::Function& function,
-                     size_t& errors,
+                     size_t& /*errors*/,
                      size_t& skipped,
                      llvm::ModuleSlotTracker& MST) -> std::optional<Stats> {
     if (function.isDeclaration()) {
@@ -361,8 +361,8 @@ auto run_on_function(llvm::Function& function,
     };
 }
 
-auto run_on_module(llvm::Module& module,
-                   llvm::ModuleSlotTracker& MST) -> std::vector<Stats> {
+auto run_on_module(llvm::Module& module, llvm::ModuleSlotTracker& MST)
+    -> std::vector<Stats> {
     fmt::print("Running on module: {}\n", module.getName().str());
 
     auto stats = std::vector<Stats>{};

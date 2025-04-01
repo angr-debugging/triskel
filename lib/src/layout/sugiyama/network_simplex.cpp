@@ -1,4 +1,5 @@
 // Based on https://www.graphviz.org/documentation/TSE93.pdf
+#include "triskel/layout/sugiyama/network_simplex.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -10,9 +11,10 @@
 #include <vector>
 
 #include <fmt/base.h>
+#include <fmt/format.h>
+
 #include "triskel/graph/igraph.hpp"
 #include "triskel/layout/sugiyama/layer_assignement.hpp"
-#include "triskel/layout/sugiyama/network_simplex.hpp"
 #include "triskel/utils/attribute.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
@@ -143,8 +145,6 @@ auto SpanningTree::low(NodeId n) const -> size_t {
 }
 
 auto SpanningTree::get_component(const Edge& e, NodeId w) const -> int32_t {
-    int32_t c = 1;
-
     auto u       = e.from();
     const auto v = e.to();
 
@@ -152,7 +152,7 @@ auto SpanningTree::get_component(const Edge& e, NodeId w) const -> int32_t {
         u = v;
     }
 
-    return low(u) <= lim(w) && lim(w) <= lim(u) ? -c : c;
+    return low(u) <= lim(w) && lim(w) <= lim(u) ? -1 : 1;
 }
 
 /// @brief Initializes the cut values
@@ -256,7 +256,7 @@ void SpanningTree::exchange(const Edge& e, const Edge& f) {
         std::swap(tail, head);
     }
 
-    size_t delta = slack(f);
+    const size_t delta = slack(f);
     update_ranks_rec(tail, NodeId::InvalidID, delta);
 
     e_in_tree_[f] = true;

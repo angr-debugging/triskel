@@ -12,28 +12,28 @@ struct Patriarchal {
     virtual ~Patriarchal() = default;
 
     /// @brief Gets this node's parent
-    [[nodiscard]] auto parents(NodeId) -> std::generator<Node>;
+    [[nodiscard]] auto parents(NodeId id) -> std::generator<Node>;
 
     /// @brief Gets this node's only parent.
     /// If this node has multiple parents raises an error
-    [[nodiscard]] auto parent(NodeId) -> Node;
+    [[nodiscard]] auto parent(NodeId id) -> Node;
 
     /// @brief Gets this node's only parent.
     /// If this node has multiple parents raises an error
-    [[nodiscard]] auto parent_id(NodeId) const -> NodeId;
+    [[nodiscard]] auto parent_id(NodeId id) const -> NodeId;
 
     /// @brief The number of children of a node
-    [[nodiscard]] auto parent_count(NodeId) -> size_t;
+    [[nodiscard]] auto parent_count(NodeId id) -> size_t;
 
     /// @brief Gets this node's children
-    [[nodiscard]] auto children(NodeId) -> std::generator<Node>;
+    [[nodiscard]] auto children(NodeId id) -> std::generator<Node>;
 
     /// @brief Gets this node's only child.
     /// If this node has multiple children raises an error
-    [[nodiscard]] auto child(NodeId) -> Node;
+    [[nodiscard]] auto child(NodeId id) -> Node;
 
     /// @brief The number of children of a node
-    [[nodiscard]] auto children_count(NodeId) -> size_t;
+    [[nodiscard]] auto children_count(NodeId id) -> size_t;
 
     /// @brief Does node n1 precede n2 ?
     /// Checks using a node's children

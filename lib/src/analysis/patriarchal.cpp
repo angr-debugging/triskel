@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <functional>
+#include <generator>
 #include <queue>
 #include <vector>
 
@@ -57,38 +58,38 @@ void Patriarchal::add_parent(NodeId parent, NodeId child) {
     children.push_back(child);
 }
 
-auto Patriarchal::parent_count(NodeId n) -> size_t {
-    return parents_.get(n).size();
+auto Patriarchal::parent_count(NodeId id) -> size_t {
+    return parents_.get(id).size();
 }
 
-auto Patriarchal::parents(NodeId n) -> std::generator<Node> {
-    for (const auto& node : parents_.get(n)) {
+auto Patriarchal::parents(NodeId id) -> std::generator<Node> {
+    for (const auto& node : parents_.get(id)) {
         co_yield (g_.get_node(node));
     }
 }
 
-auto Patriarchal::parent_id(NodeId n) const -> NodeId {
-    const auto& parents = parents_.get(n);
+auto Patriarchal::parent_id(NodeId id) const -> NodeId {
+    const auto& parents = parents_.get(id);
     assert(parents.size() == 1);
     return parents.front();
 }
 
-auto Patriarchal::parent(NodeId n) -> Node {
-    return g_.get_node(parent_id(n));
+auto Patriarchal::parent(NodeId id) -> Node {
+    return g_.get_node(parent_id(id));
 }
 
-auto Patriarchal::children_count(NodeId n) -> size_t {
-    return children_.get(n).size();
+auto Patriarchal::children_count(NodeId id) -> size_t {
+    return children_.get(id).size();
 }
 
-auto Patriarchal::children(NodeId n) -> std::generator<Node> {
-    for (const auto& node : children_.get(n)) {
+auto Patriarchal::children(NodeId id) -> std::generator<Node> {
+    for (const auto& node : children_.get(id)) {
         co_yield g_.get_node(node);
     }
 }
 
-auto Patriarchal::child(NodeId n) -> Node {
-    auto& children = children_.get(n);
+auto Patriarchal::child(NodeId id) -> Node {
+    auto& children = children_.get(id);
     assert(children.size() == 1);
     return g_.get_node(children.front());
 }

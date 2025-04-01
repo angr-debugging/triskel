@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stack>
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/graph/owning_graph.hpp"
@@ -36,6 +37,11 @@ struct SubGraphEditor : public IGraphEditor {
     SubGraph& sg_;
     IGraphEditor& editor_;
 
+    struct Frame {
+        std::vector<NodeId> selected_nodes;
+    };
+    std::stack<Frame> frames_;
+
     /// @brief Add an edge to the subgraph
     void select_edge(const Edge& edge);
 
@@ -50,7 +56,7 @@ struct SubGraphEditor : public IGraphEditor {
 // TODO: make an intersection of graph and subgraph that does not have the
 // editor
 struct SubGraph : public OwningGraph {
-    explicit SubGraph(Graph& g);
+    explicit SubGraph(IGraph& g);
 
     /// @brief The root of this graph
     [[nodiscard]] auto editor() -> SubGraphEditor& override;

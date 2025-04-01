@@ -85,15 +85,20 @@ struct SugiyamaAnalysis : public ILayout {
         [[nodiscard]] auto height() const -> float { return top + bottom; }
 
         [[nodiscard]] static auto all(float padding) -> Padding {
-            return {padding, padding, padding, padding};
+            return {.top    = padding,
+                    .bottom = padding,
+                    .left   = padding,
+                    .right  = padding};
         }
 
         [[nodiscard]] static auto horizontal(float padding) -> Padding {
-            return {0.0F, 0.0F, padding, padding};
+            return {
+                .top = 0.0F, .bottom = 0.0F, .left = padding, .right = padding};
         }
 
         [[nodiscard]] static auto vertical(float padding) -> Padding {
-            return {padding, padding, 0.0F, 0.0F};
+            return {
+                .top = padding, .bottom = padding, .left = 0.0F, .right = 0.0F};
         }
     };
 
@@ -149,9 +154,8 @@ struct SugiyamaAnalysis : public ILayout {
 
     auto max_x(std::vector<Node>& nodes, size_t id, float graph_width) -> float;
 
-    auto average_position(const Node& node,
-                          size_t layer,
-                          bool is_going_down) -> float;
+    auto average_position(const Node& node, size_t layer, bool is_going_down)
+        -> float;
 
     void set_layer(const Node& node, size_t layer);
 

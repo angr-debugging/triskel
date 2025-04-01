@@ -5,8 +5,6 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <ranges>
-#include <set>
 #include <span>
 #include <unordered_map>
 #include <utility>
@@ -64,7 +62,7 @@ struct RNode {
     }
 
     void new_child(const Node& n, const std::span<size_t>& n_radix) {
-        assert(n_radix.size() > 0);
+        assert(!n_radix.empty());
 
         auto node = std::make_unique<RNode>();
         node->radix.assign(n_radix.begin(), n_radix.end());

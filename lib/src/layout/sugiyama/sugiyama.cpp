@@ -28,6 +28,20 @@
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
 
+void graph_sanity(const IGraph& g) {
+    for (const auto& node : g.nodes()) {
+        assert(static_cast<size_t>(node.id()) < 500);
+
+        for (const auto& e : node.edges()) {
+            assert(static_cast<size_t>(e.id()) < 500);
+        }
+
+        for (const auto& n : node.neighbors()) {
+            assert(static_cast<size_t>(n.id()) < 500);
+        }
+    }
+}
+
 auto SugiyamaAnalysis::layer_view(size_t layer) {
     return std::ranges::views::filter(
         [layer, this](const Node& node) { return layers_.get(node) == layer; });
@@ -112,29 +126,48 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
 
     cycle_removal();
 
+    graph_sanity(g);
+
     layer_assignment();
+
+    graph_sanity(g);
 
     slide_nodes();
 
+    graph_sanity(g);
+
     ensure_io_at_extremities();
+
+    graph_sanity(g);
 
     remove_long_edges();
 
+    graph_sanity(g);
+
     init_node_layers();
+
+    graph_sanity(g);
 
     ge.push();
     flip_edges();
 
+    graph_sanity(g);
+
     y_coordinate_assignment();
 
+    graph_sanity(g);
     vertex_ordering();
 
+    graph_sanity(g);
     waypoint_creation();
 
+    graph_sanity(g);
     x_coordinate_assignment();
 
+    graph_sanity(g);
     translate_waypoints();
 
+    graph_sanity(g);
     calculate_waypoints_y();
 
     height_ = compute_graph_height();
@@ -142,14 +175,17 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
 
     ge.pop();
 
+    graph_sanity(g);
     make_io_waypoints();
 
+    graph_sanity(g);
     build_long_edges_waypoints();
 
     // Sets the edge waypoints
 
     ge.pop();
 
+    graph_sanity(g);
     // Fix the self loops
     draw_self_loops();
 
@@ -230,7 +266,9 @@ void SugiyamaAnalysis::cycle_removal() {
     auto dfs = DFSAnalysis(g);
     auto& ge = g.editor();
 
-    for (const auto& edge : g.edges()) {
+    auto edges = gen_to_v(g.edges());
+
+    for (const auto& edge : edges) {
         if (dfs.is_backedge(edge)) {
             // Self loop
             if (edge.to() == edge.from()) {
@@ -393,8 +431,6 @@ void SugiyamaAnalysis::remove_long_edges() {
 
         auto& waypoints = edge_waypoints_.get(edge);
 
-        ge.remove_edge(edge);
-
         if (!is_io_edge(edge)) {
             // IO edges are handles differently
             deleted_edges_.push_back(edge);
@@ -448,6 +484,8 @@ void SugiyamaAnalysis::remove_long_edges() {
                 ge.edit_edge(edge, edge.to(), edge.from());
             }
         }
+
+        ge.remove_edge(edge);
     }
 }
 

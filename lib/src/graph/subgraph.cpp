@@ -3,11 +3,11 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <stack>
 #include <vector>
 
 #include <fmt/core.h>
 #include <fmt/printf.h>
-#include <unistd.h>
 
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/generator.hpp"
@@ -35,7 +35,9 @@ void SubGraphEditor::select_node(NodeId id) {
 
 void SubGraphEditor::unselect_node(NodeId id) {
     if (sg_.contains(id)) {
-        sg_.data_.nodes[id] = std::make_unique<NodeData>(id);
+        unselect_edges(id);
+
+        sg_.data_.nodes.erase(id);
     }
 }
 
@@ -55,7 +57,7 @@ void SubGraphEditor::select_edges(NodeId node) {
     auto n = sg_.g_.get_node(node);
 
     for (const auto& edge : n.edges()) {
-        if (sg_.contains(edge.other(node))) {
+        if (sg_.contains(edge.other(node)) && !sg_.contains(edge)) {
             select_edge(edge);
         }
     }
@@ -81,14 +83,14 @@ void SubGraphEditor::make_root(NodeId node) {
 auto SubGraphEditor::make_node() -> Node {
     auto node = editor_.make_node();
     select_node(node);
+
     // We want the object in the subgraph
     return sg_.get_node(node);
 }
 
 void SubGraphEditor::remove_node(NodeId node) {
     assert(sg_.contains(node));
-    unselect_edges(node);
-    sg_.data_.nodes.erase(node);
+    unselect_node(node);
     editor_.remove_node(node);
 }
 
@@ -101,16 +103,30 @@ auto SubGraphEditor::make_edge(NodeId from, NodeId to) -> Edge {
 }
 
 void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
-    assert(sg_.contains(new_from) && sg_.contains(new_to));
-    sg_.data_.edges.erase(edge);
+    assert(sg_.contains(new_from));
+    assert(sg_.contains(new_to));
+
+    EdgeData* sg_edge;
+    if (sg_.contains(edge)) {
+        sg_edge = sg_.data_.edges[edge].get();
+        sg_edge->unlink();
+    } else {
+        sg_.data_.edges[edge] = std::make_unique<EdgeData>(edge);
+        sg_edge               = sg_.data_.edges[edge].get();
+    }
 
     editor_.edit_edge(edge, new_from, new_to);
+    const auto& g_edge = sg_.g_.get_edge(edge);
 
-    select_edge(sg_.g_.get_edge(edge));
+    sg_edge->to   = sg_.data_.nodes[g_edge.to()].get();
+    sg_edge->from = sg_.data_.nodes[g_edge.from()].get();
+
+    sg_edge->link();
 }
 
 void SubGraphEditor::remove_edge(EdgeId edge) {
     assert(sg_.contains(edge));
+    const auto& e = sg_.get_edge(edge);
     sg_.data_.edges.at(edge)->unlink();
     sg_.data_.edges.erase(edge);
     editor_.remove_edge(edge);
@@ -118,37 +134,39 @@ void SubGraphEditor::remove_edge(EdgeId edge) {
 
 void SubGraphEditor::push() {
     editor_.push();
+    frames_.emplace();
+
+    frames_.top().selected_nodes.reserve(sg_.node_count());
+    for (const auto& node : sg_.nodes()) {
+        frames_.top().selected_nodes.push_back(node);
+    }
 }
 
 // TODO: OPTIMIZE
 void SubGraphEditor::pop() {
     editor_.pop();
 
-    auto node_ids = std::vector<NodeId>{};
-    node_ids.reserve(sg_.data_.nodes.size());
-
-    for (const auto& node : sg_.nodes()) {
-        node_ids.push_back(node);
-    }
+    auto frame = frames_.top();
+    frames_.pop();
 
     sg_.data_.nodes.clear();
     sg_.data_.edges.clear();
 
-    for (const auto& id : node_ids) {
-        if (sg_.g_.contains(id)) {
-            select_node(id);
-        }
+    for (const auto node : frame.selected_nodes) {
+        select_node(node);
     }
 }
 
 void SubGraphEditor::commit() {
     editor_.commit();
+
+    frames_ = std::stack<Frame>{};
 }
 
 // =============================================================================
 // Subgraph
 // =============================================================================
-SubGraph::SubGraph(Graph& g) : g_{g}, editor_{*this} {}
+SubGraph::SubGraph(IGraph& g) : g_{g}, editor_{*this} {}
 
 auto SubGraph::max_node_id() const -> size_t {
     return g_.max_node_id();
