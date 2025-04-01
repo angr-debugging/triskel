@@ -7,8 +7,10 @@
 
 #include <fmt/core.h>
 #include <fmt/printf.h>
+#include <unistd.h>
 
 #include "triskel/graph/igraph.hpp"
+#include "triskel/utils/generator.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
@@ -63,8 +65,10 @@ void SubGraphEditor::unselect_edges(NodeId node) {
     // The node in the complete graph
     auto n = sg_.g_.get_node(node);
 
-    for (const auto& edge : n.edges()) {
+    const auto& edges = gen_to_v(n.edges());
+    for (const auto& edge : edges) {
         if (sg_.contains(edge.other(node))) {
+            sg_.data_.edges.at(edge)->unlink();
             sg_.data_.edges.erase(edge);
         }
     }
@@ -83,6 +87,8 @@ auto SubGraphEditor::make_node() -> Node {
 
 void SubGraphEditor::remove_node(NodeId node) {
     assert(sg_.contains(node));
+    unselect_edges(node);
+    sg_.data_.nodes.erase(node);
     editor_.remove_node(node);
 }
 
@@ -104,6 +110,9 @@ void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
 }
 
 void SubGraphEditor::remove_edge(EdgeId edge) {
+    assert(sg_.contains(edge));
+    sg_.data_.edges.at(edge)->unlink();
+    sg_.data_.edges.erase(edge);
     editor_.remove_edge(edge);
 }
 
@@ -111,22 +120,24 @@ void SubGraphEditor::push() {
     editor_.push();
 }
 
-// TODO:
+// TODO: OPTIMIZE
 void SubGraphEditor::pop() {
     editor_.pop();
 
     auto node_ids = std::vector<NodeId>{};
     node_ids.reserve(sg_.data_.nodes.size());
 
-    auto edge_ids = std::vector<EdgeId>{};
-    edge_ids.reserve(sg_.data_.edges.size());
-
     for (const auto& node : sg_.nodes()) {
         node_ids.push_back(node);
     }
 
-    for (const auto& edge : sg_.edges()) {
-        edge_ids.push_back(edge);
+    sg_.data_.nodes.clear();
+    sg_.data_.edges.clear();
+
+    for (const auto& id : node_ids) {
+        if (sg_.g_.contains(id)) {
+            select_node(id);
+        }
     }
 }
 
@@ -149,12 +160,4 @@ auto SubGraph::max_edge_id() const -> size_t {
 
 auto SubGraph::editor() -> SubGraphEditor& {
     return editor_;
-}
-
-auto SubGraph::contains(NodeId node) -> bool {
-    return data_.nodes.contains(node);
-}
-
-auto SubGraph::contains(EdgeId edge) -> bool {
-    return data_.edges.contains(edge);
 }

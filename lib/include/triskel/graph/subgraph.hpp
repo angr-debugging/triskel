@@ -2,6 +2,7 @@
 
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
+#include "triskel/graph/owning_graph.hpp"
 
 namespace triskel {
 
@@ -48,17 +49,11 @@ struct SubGraphEditor : public IGraphEditor {
 /// @brief A graph that contains only some nodes of another graph
 // TODO: make an intersection of graph and subgraph that does not have the
 // editor
-struct SubGraph : public Graph {
+struct SubGraph : public OwningGraph {
     explicit SubGraph(Graph& g);
 
     /// @brief The root of this graph
     [[nodiscard]] auto editor() -> SubGraphEditor& override;
-
-    /// @brief Does this subgraph have this node
-    [[nodiscard]] auto contains(NodeId node) -> bool;
-
-    /// @brief Does this subgraph have this edge
-    [[nodiscard]] auto contains(EdgeId edge) -> bool;
 
     /// @brief The greatest id in this graph
     [[nodiscard]] auto max_node_id() const -> size_t override;

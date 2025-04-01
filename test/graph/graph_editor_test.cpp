@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <fmt/base.h>
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 
 // NOLINTNEXTLINE(google-build-using-namespace)
@@ -41,7 +42,7 @@ using namespace triskel;
     auto e6_8 = ge.make_edge(n6, n8); \
     ge.commit();
 
-TEST(Attribute, addNode) {
+TEST(Editor, addNode) {
     GRAPH1
 
     ge.push();
@@ -61,34 +62,46 @@ TEST(Attribute, addNode) {
     }
 }
 
-TEST(Attribute, rmNode) {
+TEST(Editor, rmNode) {
     GRAPH1
 
     size_t og_size = g.node_count();
 
     ge.push();
 
+    auto id = n3.id();
+    fmt::print("A\n");
     ge.remove_node(n3);
 
+    fmt::print("B\n");
+
     ASSERT_EQ(g.node_count(), og_size - 1);
+    fmt::print("C\n");
 
     for (const auto& n : g.nodes()) {
-        ASSERT_NE(n, n3);
+        ASSERT_NE(n, id);
+        fmt::print("D\n");
     }
 
     for (const auto& e : g.edges()) {
-        ASSERT_NE(e.from(), n3);
-        ASSERT_NE(e.to(), n3);
+        fmt::print("E\n");
+        ASSERT_NE(e.from(), id);
+        ASSERT_NE(e.to(), id);
     }
 
+    fmt::print("F\n");
     ge.pop();
+    fmt::print("G\n");
 
     ASSERT_EQ(g.node_count(), og_size);
+    fmt::print("H\n");
 
     ASSERT_TRUE(std::ranges::contains(g.edges(), e2_3));
+    fmt::print("I\n");
+    ASSERT_NO_THROW(auto _ = n3.children_count());
 }
 
-TEST(Attribute, addEdge) {
+TEST(Editor, addEdge) {
     GRAPH1
 
     ge.push();
@@ -111,7 +124,7 @@ TEST(Attribute, addEdge) {
     }
 }
 
-TEST(Attribute, rmEdge) {
+TEST(Editor, rmEdge) {
     GRAPH1
 
     ge.push();
@@ -135,21 +148,22 @@ TEST(Attribute, rmEdge) {
     ASSERT_TRUE(std::ranges::contains(g.edges(), e3_4));
 }
 
-TEST(Attribute, editEdge) {
+TEST(Editor, editEdge) {
     GRAPH1
 
     ge.push();
 
     ge.edit_edge(e3_4, n1, n5);
 
+    fmt::print("{} vs {}->{}\n", e3_4, n1, n5);
     ASSERT_EQ(e3_4.from(), n1);
     ASSERT_EQ(e3_4.to(), n5);
 
-    ASSERT_TRUE(std::ranges::contains(n1.edges(), e3_4));
-    ASSERT_TRUE(std::ranges::contains(n5.edges(), e3_4));
+    ASSERT_TRUE(std::ranges::contains(n1.edges(), g.get_edge(e3_4)));
+    ASSERT_TRUE(std::ranges::contains(n5.edges(), g.get_edge(e3_4)));
 
-    ASSERT_FALSE(std::ranges::contains(n3.edges(), e3_4));
-    ASSERT_FALSE(std::ranges::contains(n4.edges(), e3_4));
+    ASSERT_FALSE(std::ranges::contains(n3.edges(), g.get_edge(e3_4)));
+    ASSERT_FALSE(std::ranges::contains(n4.edges(), g.get_edge(e3_4)));
 
     ge.pop();
 

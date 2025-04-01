@@ -115,7 +115,7 @@ using NodeMap = std::unordered_map<NodeId, std::unique_ptr<NodeData>>;
 using EdgeMap = std::unordered_map<EdgeId, std::unique_ptr<EdgeData>>;
 
 struct GraphData {
-    NodeId root;
+    NodeId root = NodeId::InvalidID;
 
     NodeMap nodes;
     EdgeMap edges;
@@ -199,6 +199,12 @@ struct IGraph {
 
     /// @brief Gets the editor attached to this graph
     [[nodiscard]] virtual auto editor() -> IGraphEditor& = 0;
+
+    /// @brief Does this subgraph have this node
+    [[nodiscard]] virtual auto contains(NodeId node) -> bool = 0;
+
+    /// @brief Does this subgraph have this edge
+    [[nodiscard]] virtual auto contains(EdgeId edge) -> bool = 0;
 };
 
 auto format_as(const Node& n) -> std::string;

@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "triskel/graph/igraph.hpp"
+#include "triskel/utils/generator.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
@@ -43,7 +44,8 @@ void GraphEditor::remove_node(NodeId id) {
     // Not handled
     assert(node != g_.root());
 
-    for (const auto& edge : node.edges()) {
+    auto edges = gen_to_v(node.edges());
+    for (const auto& edge : edges) {
         remove_edge(edge);
     }
 
@@ -76,23 +78,22 @@ auto GraphEditor::make_edge(NodeId from, NodeId to) -> Edge {
 
 void GraphEditor::remove_edge(EdgeId id) {
     auto edge = std::move(g_.data_.edges[id]);
-    g_.data_.edges.erase(id);
-
     edge->unlink();
 
     frame().deleted_edges.push(std::move(edge));
+    g_.data_.edges.erase(id);
 }
 
 void GraphEditor::edit_edge(EdgeId id, NodeId new_from, NodeId new_to) {
-    // Delete the old edge
-    {
-        auto edge = std::move(g_.data_.edges[id]);
-        edge->unlink();
-        frame().modified_edges.push(std::move(edge));
-    }
+    auto& edge = g_.data_.edges[id];
+    edge->unlink();
 
-    // Create a new edge
-    make_edge(id, new_from, new_to);
+    // Save the old edge
+    frame().modified_edges.push(*edge);
+
+    edge->from = g_.data_.nodes.at(new_from).get();
+    edge->to   = g_.data_.nodes.at(new_to).get();
+    edge->link();
 }
 
 auto GraphEditor::frame() -> Frame& {
@@ -112,14 +113,14 @@ void GraphEditor::pop() {
     // The order here is important, otherwise we might modify deleted elements
     // Revert edited edges
     while (!f.modified_edges.empty()) {
-        auto old_edge = std::move(f.modified_edges.top());
+        auto old_edge = f.modified_edges.top();
         f.modified_edges.pop();
 
-        auto& new_edge = g_.data_.edges[old_edge->id];
+        auto& new_edge = g_.data_.edges[old_edge.id];
         new_edge->unlink();
 
-        old_edge->link();
-        g_.data_.edges[old_edge->id] = std::move(old_edge);
+        *new_edge = old_edge;
+        new_edge->link();
     }
 
     // Revert removed edges
@@ -163,33 +164,7 @@ void GraphEditor::commit() {
 // Graph
 // =============================================================================
 
-Graph::Graph() : data_{.root = NodeId::InvalidID}, editor_{*this} {}
-
-auto Graph::root() const -> Node {
-    return get_node(data_.root);
-}
-
-auto Graph::nodes() const -> std::generator<Node> {
-    for (const auto& node : data_.nodes) {
-        co_yield Node{*node.second};
-    }
-}
-
-auto Graph::edges() const -> std::generator<Edge> {
-    for (const auto& edge : data_.edges) {
-        co_yield Edge{*edge.second};
-    }
-}
-
-auto Graph::get_node(NodeId id) const -> Node {
-    assert(id != NodeId::InvalidID);
-    return {*data_.nodes.at(id)};
-}
-
-auto Graph::get_edge(EdgeId id) const -> Edge {
-    assert(id != EdgeId::InvalidID);
-    return {*data_.edges.at(id)};
-}
+Graph::Graph() : editor_{*this} {}
 
 auto Graph::max_node_id() const -> size_t {
     return editor_.next_node_id_;
@@ -198,15 +173,6 @@ auto Graph::max_node_id() const -> size_t {
 auto Graph::max_edge_id() const -> size_t {
     return editor_.next_edge_id_;
 }
-
-auto Graph::node_count() const -> size_t {
-    return data_.nodes.size();
-}
-
-auto Graph::edge_count() const -> size_t {
-    return data_.edges.size();
-}
-
 auto Graph::editor() -> IGraphEditor& {
     return editor_;
 }

@@ -1,12 +1,22 @@
+#include <algorithm>
+#include <generator>
 #include <triskel/graph/subgraph.hpp>
 
 #include <fmt/printf.h>
 #include <gtest/gtest.h>
 
 #include <triskel/graph/graph.hpp>
+#include "triskel/utils/generator.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
+
+namespace {
+template <typename T>
+auto contains(std::generator<T>&& gen, const T& v) {
+    return std::ranges::contains(gen_to_v(std::move(gen)), v);
+}
+}  // namespace
 
 #define GRAPH1                         \
     auto gg   = Graph{};               \
@@ -48,7 +58,7 @@ TEST(SubGraph, Smoke) {
     ge.select_node(n1);
 
     ASSERT_EQ(g.node_count(), 1);
-    ASSERT_TRUE(std::ranges::contains(g.nodes(), n1));
+    ASSERT_TRUE(contains(g.nodes(), n1));
 }
 
 TEST(SubGraph, AddEdge) {
@@ -58,7 +68,7 @@ TEST(SubGraph, AddEdge) {
     ge.select_node(n2);
 
     ASSERT_EQ(g.edge_count(), 1);
-    ASSERT_TRUE(std::ranges::contains(g.edges(), e1_2));
+    ASSERT_TRUE(contains(g.edges(), e1_2));
 }
 
 TEST(SubGraph, addNode) {
@@ -86,14 +96,17 @@ TEST(SubGraph, rmNode) {
     ge.select_node(n2);
     ge.select_node(n3);
 
-    size_t og_size = g.node_count();
+    size_t og_size_gg = gg.node_count();
+    size_t og_size    = g.node_count();
 
     ge.push();
 
     ge.remove_node(n3);
 
+    ASSERT_EQ(gg.node_count(), og_size_gg - 1);
     ASSERT_EQ(g.node_count(), og_size - 1);
-    ASSERT_FALSE(std::ranges::contains(g.edges(), e2_3));
+    ASSERT_FALSE(contains(g.edges(), e2_3));
+    ASSERT_FALSE(contains(gg.edges(), e2_3));
 
     for (const auto& n : g.nodes()) {
         ASSERT_NE(n, n3);
@@ -106,8 +119,10 @@ TEST(SubGraph, rmNode) {
 
     ge.pop();
 
+    ASSERT_EQ(gg.node_count(), og_size_gg);
     ASSERT_EQ(g.node_count(), og_size);
-    ASSERT_TRUE(std::ranges::contains(g.edges(), e2_3));
+    ASSERT_TRUE(contains(g.edges(), e2_3));
+    ASSERT_TRUE(contains(gg.edges(), e2_3));
 }
 
 TEST(SubGraph, addEdge) {
@@ -121,8 +136,8 @@ TEST(SubGraph, addEdge) {
 
     auto new_edge = ge.make_edge(n1, n5);
 
-    ASSERT_TRUE(std::ranges::contains(n1.edges(), new_edge));
-    ASSERT_TRUE(std::ranges::contains(n5.edges(), new_edge));
+    ASSERT_TRUE(contains(n1.edges(), new_edge));
+    ASSERT_TRUE(contains(n5.edges(), new_edge));
 
     ASSERT_EQ(g.edge_count(), og_size + 1);
 
@@ -149,17 +164,17 @@ TEST(SubGraph, rmEdge) {
 
     ASSERT_EQ(g.edge_count(), og_size - 1);
 
-    ASSERT_FALSE(std::ranges::contains(n3.edges(), e3_4));
-    ASSERT_FALSE(std::ranges::contains(n4.edges(), e3_4));
-    ASSERT_FALSE(std::ranges::contains(g.edges(), e3_4));
+    ASSERT_FALSE(contains(n3.edges(), e3_4));
+    ASSERT_FALSE(contains(n4.edges(), e3_4));
+    ASSERT_FALSE(contains(g.edges(), e3_4));
 
     ge.pop();
 
     ASSERT_EQ(g.edge_count(), og_size);
 
-    ASSERT_TRUE(std::ranges::contains(n3.edges(), e3_4));
-    ASSERT_TRUE(std::ranges::contains(n4.edges(), e3_4));
-    ASSERT_TRUE(std::ranges::contains(g.edges(), e3_4));
+    ASSERT_TRUE(contains(n3.edges(), e3_4));
+    ASSERT_TRUE(contains(n4.edges(), e3_4));
+    ASSERT_TRUE(contains(g.edges(), e3_4));
 }
 
 TEST(SubGraph, editEdge) {
@@ -177,22 +192,22 @@ TEST(SubGraph, editEdge) {
     ASSERT_EQ(e3_4.from(), n1);
     ASSERT_EQ(e3_4.to(), n5);
 
-    ASSERT_TRUE(std::ranges::contains(n1.edges(), e3_4));
-    ASSERT_TRUE(std::ranges::contains(n5.edges(), e3_4));
+    ASSERT_TRUE(contains(n1.edges(), e3_4));
+    ASSERT_TRUE(contains(n5.edges(), e3_4));
 
-    ASSERT_FALSE(std::ranges::contains(n3.edges(), e3_4));
-    ASSERT_FALSE(std::ranges::contains(n4.edges(), e3_4));
+    ASSERT_FALSE(contains(n3.edges(), e3_4));
+    ASSERT_FALSE(contains(n4.edges(), e3_4));
 
     ge.pop();
 
     ASSERT_EQ(e3_4.from(), n3);
     ASSERT_EQ(e3_4.to(), n4);
 
-    ASSERT_FALSE(std::ranges::contains(n1.edges(), e3_4));
-    ASSERT_FALSE(std::ranges::contains(n5.edges(), e3_4));
+    ASSERT_FALSE(contains(n1.edges(), e3_4));
+    ASSERT_FALSE(contains(n5.edges(), e3_4));
 
-    ASSERT_TRUE(std::ranges::contains(n3.edges(), e3_4));
-    ASSERT_TRUE(std::ranges::contains(n4.edges(), e3_4));
+    ASSERT_TRUE(contains(n3.edges(), e3_4));
+    ASSERT_TRUE(contains(n4.edges(), e3_4));
 }
 
 #undef GRAPH1

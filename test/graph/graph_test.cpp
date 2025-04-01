@@ -1,12 +1,17 @@
 #include <algorithm>
-#include <set>
 #include <triskel/graph/graph.hpp>
+
+#include <set>
 #include <vector>
-#include "gtest/gtest.h"
-#include "triskel/graph/igraph.hpp"
-#include "triskel/utils/generator.hpp"
+
+#include <fmt/base.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <gtest/gtest.h>
+
+#include "triskel/graph/igraph.hpp"
+#include "triskel/utils/generator.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
@@ -55,7 +60,7 @@ TEST(Graph, Counts) {
     ASSERT_EQ(g.edge_count(), 10);
 
     ASSERT_EQ(n1.parent_count(), 0);
-    ASSERT_EQ(n1.parent_count(), 3);
+    ASSERT_EQ(n1.children_count(), 3);
 
     ASSERT_EQ(n2.children_count(), 1);
     ASSERT_EQ(n2.parent_count(), 2);
@@ -79,24 +84,66 @@ TEST(Graph, Counts) {
     ASSERT_EQ(n8.parent_count(), 2);
 
     for (const auto& n : g.nodes()) {
-        ASSERT_EQ(n1.neighbor_count(), n.parent_count() + n.children_count());
+        ASSERT_EQ(n.neighbor_count(), n.parent_count() + n.children_count());
     }
 }
+
+namespace {
+auto format_as(const std::set<Node>& set) -> std::string {
+    std::string s;
+
+    for (const auto& v : set) {
+        s += fmt::format("{}, ", v);
+    }
+
+    return s;
+}
+}  // namespace
 
 TEST(Graph, Children) {
     GRAPH1;
 
-    auto sets_match = [](const std::vector<Node>& v1,
-                         const std::vector<Node>& v2) {
-        return std::set<Node>(v1.begin(), v1.end()) ==
-               std::set<Node>(v2.begin(), v2.end());
+    auto test = [](const Node& n, std::initializer_list<NodeId> l) {
+        auto actual = std::set<NodeId>{};
+        for (const auto& node : n.child_nodes()) {
+            actual.insert(node);
+        }
+        auto str      = fmt::format("{}", actual);
+        auto expected = fmt::format("{}", std::set<NodeId>(l));
+        ASSERT_EQ(str, expected);
     };
 
-    {
-        auto children = gen_to_v(n1.child_nodes());
-        auto expected = std::vector<Node>{n2, n5, n8};
-        ASSERT_PRED2(sets_match, children, expected);
-    }
+    test(n1, {n2, n5, n8});
+    test(n2, {n3});
+    test(n3, {n4});
+    test(n4, {n2});
+    test(n5, {n6});
+    test(n6, {n3, n7, n8});
+    test(n7, {});
+    test(n8, {});
+}
+
+TEST(Graph, Parents) {
+    GRAPH1;
+
+    auto test = [](const Node& n, std::initializer_list<NodeId> l) {
+        auto actual = std::set<NodeId>{};
+        for (const auto& node : n.parent_nodes()) {
+            actual.insert(node);
+        }
+        auto str      = fmt::format("{}", actual);
+        auto expected = fmt::format("{}", std::set<NodeId>(l));
+        ASSERT_EQ(str, expected);
+    };
+
+    test(n1, {});
+    test(n2, {n1, n4});
+    test(n3, {n2, n6});
+    test(n4, {n3});
+    test(n5, {n1});
+    test(n6, {n5});
+    test(n7, {n6});
+    test(n8, {n1, n6});
 }
 
 #undef GRAPH1
