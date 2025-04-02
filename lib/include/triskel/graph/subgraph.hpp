@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stack>
-#include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/graph/owning_graph.hpp"
 

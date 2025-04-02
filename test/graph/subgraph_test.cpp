@@ -198,6 +198,12 @@ TEST(SubGraph, editEdge) {
     ASSERT_FALSE(contains(n3.edges(), e3_4));
     ASSERT_FALSE(contains(n4.edges(), e3_4));
 
+    ASSERT_TRUE(contains(n1.neighbors(), n5));
+    ASSERT_TRUE(contains(n5.neighbors(), n1));
+
+    ASSERT_FALSE(contains(n3.neighbors(), n4));
+    ASSERT_FALSE(contains(n4.neighbors(), n3));
+
     ge.pop();
 
     ASSERT_EQ(e3_4.from(), n3);

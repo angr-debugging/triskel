@@ -309,6 +309,20 @@ void Layout::init_regions() {
     create_region_subgraphs();
     create_region_nodes();
     edit_region_subgraph();
+
+    for (size_t i = 0; i < regions_data_.size(); ++i) {
+        const auto& region = regions_data_[i];
+        auto& ge           = region.subgraph->editor();
+
+        if (region.entries.empty()) {
+            auto& region = sese_->get_region(g_.root());
+            assert(region.id == i);
+            ge.make_root(g_.root());
+        } else {
+            assert(region.entries.size() == 1);
+            ge.make_root(region.entries.front().node);
+        }
+    }
 }
 
 auto Layout::get_x(NodeId node) const -> float {

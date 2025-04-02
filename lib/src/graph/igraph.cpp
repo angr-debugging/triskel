@@ -135,6 +135,7 @@ auto triskel::format_as(const IGraph& g) -> std::string {
     for (auto node : g.nodes()) {
         s += fmt::format("{}\n", node);
     }
+    s += fmt::format("{} [shape=square]", g.root());
 
     s += "\n";
 

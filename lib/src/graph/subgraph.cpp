@@ -77,6 +77,7 @@ void SubGraphEditor::unselect_edges(NodeId node) {
 }
 
 void SubGraphEditor::make_root(NodeId node) {
+    assert(sg_.contains(node));
     sg_.data_.root = node;
 }
 
@@ -116,10 +117,9 @@ void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
     }
 
     editor_.edit_edge(edge, new_from, new_to);
-    const auto& g_edge = sg_.g_.get_edge(edge);
 
-    sg_edge->to   = sg_.data_.nodes[g_edge.to()].get();
-    sg_edge->from = sg_.data_.nodes[g_edge.from()].get();
+    sg_edge->to   = sg_.data_.nodes[new_to].get();
+    sg_edge->from = sg_.data_.nodes[new_from].get();
 
     sg_edge->link();
 }

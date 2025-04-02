@@ -14,6 +14,7 @@
 #include <stack>
 #include <vector>
 
+#include <fmt/base.h>
 #include <fmt/core.h>
 #include <fmt/printf.h>
 
@@ -126,48 +127,29 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
 
     cycle_removal();
 
-    graph_sanity(g);
-
     layer_assignment();
 
-    graph_sanity(g);
-
-    slide_nodes();
-
-    graph_sanity(g);
+    // slide_nodes();
 
     ensure_io_at_extremities();
 
-    graph_sanity(g);
-
     remove_long_edges();
 
-    graph_sanity(g);
-
     init_node_layers();
-
-    graph_sanity(g);
 
     ge.push();
     flip_edges();
 
-    graph_sanity(g);
-
     y_coordinate_assignment();
 
-    graph_sanity(g);
     vertex_ordering();
 
-    graph_sanity(g);
     waypoint_creation();
 
-    graph_sanity(g);
     x_coordinate_assignment();
 
-    graph_sanity(g);
     translate_waypoints();
 
-    graph_sanity(g);
     calculate_waypoints_y();
 
     height_ = compute_graph_height();
@@ -175,17 +157,14 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
 
     ge.pop();
 
-    graph_sanity(g);
     make_io_waypoints();
 
-    graph_sanity(g);
     build_long_edges_waypoints();
 
     // Sets the edge waypoints
 
     ge.pop();
 
-    graph_sanity(g);
     // Fix the self loops
     draw_self_loops();
 
@@ -668,8 +647,7 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
         // The space between this layer and the next
         layer_gap = 2.0F * Y_GUTTER;
 
-        auto nodes = g.nodes() | layer_view(layer) |
-                     std::ranges::to<std::vector<Node>>();
+        auto nodes = node_layers_[layer];
         for (const auto& node : nodes) {
             layer_height =
                 std::max(layer_height,

@@ -8,6 +8,7 @@
 #include <deque>
 #include <limits>
 #include <memory>
+#include <queue>
 #include <vector>
 
 #include <fmt/base.h>
@@ -56,27 +57,40 @@ auto SpanningTree::leave_edge() -> EdgeId {
 void SpanningTree::init_rank() {
     ranks_[g.root()]   = 0;
     size_t found_nodes = 1;
-    size_t rank        = 1;
+    size_t rank        = 0;
 
-    while (found_nodes < g.node_count()) {
-        for (const auto& node : g.nodes()) {
-            if (ranks_.get(node) < rank) {
-                continue;
-            }
+    std::queue<Node> queue;
+    NodeAttribute<size_t> in_degrees{g, 0};
 
-            for (const auto& parent : node.parent_nodes()) {
-                if (ranks_.get(parent) >= rank) {
-                    goto continue_loop;
+    for (const auto& node : g.nodes()) {
+        in_degrees[node] = node.parent_count();
+
+        if (in_degrees[node] == 0) {
+            ranks_[node] = 0;
+            queue.push(node);
+        }
+    }
+
+    assert(queue.size() == 1);
+
+    while (!queue.empty()) {
+        size_t level_size = queue.size();
+
+        for (size_t i = 0; i < level_size; ++i) {
+            auto node = queue.front();
+            queue.pop();
+
+            for (const auto& child : node.child_nodes()) {
+                auto& in_degree = in_degrees[child];
+                in_degree--;
+                if (in_degree == 0) {
+                    ranks_[child] = rank + 1;
+                    queue.push(child);
                 }
             }
-
-            ranks_.set(node, rank);
-            found_nodes += 1;
-
-        continue_loop:
         }
 
-        rank += 1;
+        ++rank;
     }
 }
 
@@ -316,7 +330,7 @@ void SpanningTree::feasible_tree() {
         }
     }
 
-    init_cut_values();
+    // init_cut_values();
 }
 
 auto SpanningTree::normalize_ranks() -> size_t {
@@ -373,12 +387,12 @@ auto triskel::network_simplex(const IGraph& graph)
     auto spanning_tree = SpanningTree(graph);
     spanning_tree.feasible_tree();
 
-    EdgeId id;
-    while ((id = spanning_tree.leave_edge()) != EdgeId::InvalidID) {
-        auto e = graph.get_edge(id);
-        auto f = spanning_tree.enter_edge(e);
-        spanning_tree.exchange(e, f);
-    }
+    // EdgeId id;
+    // while ((id = spanning_tree.leave_edge()) != EdgeId::InvalidID) {
+    //     auto e = graph.get_edge(id);
+    //     auto f = spanning_tree.enter_edge(e);
+    //     spanning_tree.exchange(e, f);
+    // }
 
     auto rank_count = spanning_tree.normalize_ranks();
 

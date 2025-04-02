@@ -33,7 +33,7 @@ void DFS::dfs(const Node& node) {
     nodes_.push_back(node.id());
     dfs_nums_.set(node, nodes_.size() - 1);
 
-    for (const auto& edge : node.edges()) {
+    for (const auto& edge : node.child_edges()) {
         const auto child = edge.to();
         if (child == node) {
             continue;
