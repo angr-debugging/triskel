@@ -14,16 +14,17 @@ using namespace triskel;
 namespace {
 
 auto select_node(const IGraph& g,
-                 std::vector<NodeId>& U,
-                 std::vector<NodeId>& Z) -> std::optional<Node> {
-    for (const auto& node : g.nodes()) {
-        if (std::ranges::contains(U, node.id())) {
+                 std::vector<const Node*>& U,
+                 std::vector<const Node*>& Z) -> const Node* {
+    for (const auto* node : g.nodes()) {
+        if (std::ranges::contains(U, node)) {
             continue;
         }
 
         auto valid = true;
-        for (const auto& child : node.child_nodes()) {
-            if (!std::ranges::contains(Z, child.id())) {
+        for (const auto* child_edge : node->child_edges()) {
+            const auto& child = child_edge->to();
+            if (!std::ranges::contains(Z, child)) {
                 valid = false;
                 break;
             }
@@ -34,22 +35,22 @@ auto select_node(const IGraph& g,
         }
     }
 
-    return {};
+    return nullptr;
 }
 
-auto layer_assignment(const IGraph& g,
-                      NodeAttribute<size_t>& layers) -> size_t {
-    auto U = std::vector<NodeId>{};
-    auto Z = std::vector<NodeId>{};
+auto layer_assignment(const IGraph& g, NodeAttribute<size_t>& layers)
+    -> size_t {
+    auto U = std::vector<const Node*>{};
+    auto Z = std::vector<const Node*>{};
 
     size_t current_layer = 1;
 
     while (U.size() < g.node_count()) {
-        auto v = select_node(g, U, Z);
+        const auto* v = select_node(g, U, Z);
 
-        if (v.has_value()) {
+        if (v != nullptr) {
             layers.set(*v, current_layer);
-            U.push_back(v->id());
+            U.push_back(v);
             continue;
         }
 

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <stack>
 #include <vector>
@@ -9,6 +10,7 @@
 #include <fmt/core.h>
 #include <fmt/printf.h>
 
+#include "triskel/graph/frame.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/generator.hpp"
 
@@ -21,59 +23,87 @@ using namespace triskel;
 SubGraphEditor::SubGraphEditor(SubGraph& sg)
     : sg_{sg}, editor_{sg.g_.editor()} {}
 
-void SubGraphEditor::select_node(NodeId id) {
+void SubGraphEditor::select_node(NodeId id, bool use_frame) {
     if (!sg_.contains(id)) {
-        sg_.data_.nodes[id] = std::make_unique<NodeData>(id);
+        sg_.data_.nodes[id] = std::make_unique<Node>(id);
+
+        if (use_frame) {
+            frame().changes.push(Frame::MakeNode(id));
+        }
     }
 
-    select_edges(id);
+    select_edges(id, use_frame);
 
     if (sg_.data_.root == NodeId::InvalidID) {
         make_root(id);
     }
+
+    sg_.invalid_node_cache = true;
 }
 
-void SubGraphEditor::unselect_node(NodeId id) {
+void SubGraphEditor::unselect_node(NodeId id, bool use_frame) {
     if (sg_.contains(id)) {
-        unselect_edges(id);
+        unselect_edges(id, use_frame);
 
+        auto n = std::move(sg_.data_.nodes[id]);
         sg_.data_.nodes.erase(id);
+
+        if (use_frame) {
+            frame().changes.push(Frame::RemoveNode(std::move(n)));
+        }
+
+        sg_.invalid_node_cache = true;
     }
 }
 
-void SubGraphEditor::select_edge(const Edge& g_edge) {
-    sg_.data_.edges[g_edge] = std::make_unique<EdgeData>(g_edge);
+void SubGraphEditor::select_edge(const Edge* g_edge, bool use_frame) {
+    sg_.data_.edges[*g_edge] = std::make_unique<Edge>(g_edge->id());
 
-    auto& sg_edge = sg_.data_.edges[g_edge];
+    auto& sg_edge = sg_.data_.edges[*g_edge];
 
-    sg_edge->to   = sg_.data_.nodes[g_edge.to()].get();
-    sg_edge->from = sg_.data_.nodes[g_edge.from()].get();
+    sg_edge->to_   = sg_.data_.nodes[*g_edge->to()].get();
+    sg_edge->from_ = sg_.data_.nodes[*g_edge->from()].get();
 
     sg_edge->link();
+
+    if (use_frame) {
+        frame().changes.push(Frame::AddEdge(*sg_edge));
+    }
+
+    sg_.invalid_edge_cache = true;
 }
 
-void SubGraphEditor::select_edges(NodeId node) {
+void SubGraphEditor::select_edges(NodeId node, bool use_frame) {
     // The node in the complete graph
-    auto n = sg_.g_.get_node(node);
+    auto* n = sg_.g_.get_node(node);
 
-    for (const auto& edge : n.edges()) {
-        if (sg_.contains(edge.other(node)) && !sg_.contains(edge)) {
-            select_edge(edge);
+    for (const auto* edge : n->edges()) {
+        if (sg_.contains(*edge->other(node)) && !sg_.contains(*edge)) {
+            select_edge(edge, use_frame);
         }
     }
+
+    sg_.invalid_edge_cache = true;
 }
 
-void SubGraphEditor::unselect_edges(NodeId node) {
+void SubGraphEditor::unselect_edges(NodeId node, bool use_frame) {
     // The node in the complete graph
-    auto n = sg_.g_.get_node(node);
+    auto* n = sg_.g_.get_node(node);
 
-    const auto& edges = gen_to_v(n.edges());
-    for (const auto& edge : edges) {
-        if (sg_.contains(edge.other(node))) {
-            sg_.data_.edges.at(edge)->unlink();
-            sg_.data_.edges.erase(edge);
+    // Copy the vector as we are modifying it
+    const auto edges = span_to_vec(n->edges());
+    for (auto* edge : edges) {
+        if (sg_.contains(*edge->other(node))) {
+            auto e = std::move(sg_.data_.edges[*edge]);
+            e->unlink();
+            if (use_frame) {
+                frame().changes.push(Frame::RemoveEdge(std::move(e)));
+            }
+            sg_.data_.edges.erase(*edge);
         }
     }
+
+    sg_.invalid_edge_cache = true;
 }
 
 void SubGraphEditor::make_root(NodeId node) {
@@ -81,86 +111,96 @@ void SubGraphEditor::make_root(NodeId node) {
     sg_.data_.root = node;
 }
 
-auto SubGraphEditor::make_node() -> Node {
-    auto node = editor_.make_node();
-    select_node(node);
+auto SubGraphEditor::make_node() -> Node* {
+    auto* node = editor_.make_node();
+    select_node(*node, true);
 
     // We want the object in the subgraph
-    return sg_.get_node(node);
+    return sg_.get_node(*node);
 }
 
 void SubGraphEditor::remove_node(NodeId node) {
     assert(sg_.contains(node));
-    unselect_node(node);
+    unselect_node(node, true);
     editor_.remove_node(node);
 }
 
-auto SubGraphEditor::make_edge(NodeId from, NodeId to) -> Edge {
+auto SubGraphEditor::make_edge(NodeId from, NodeId to) -> Edge* {
     assert(sg_.contains(from) && sg_.contains(to));
-    auto edge = editor_.make_edge(from, to);
-    select_edge(edge);
+    auto* edge = editor_.make_edge(from, to);
+    select_edge(edge, true);
+
     // We want the object in the subgraph
-    return sg_.get_edge(edge);
+    return sg_.get_edge(*edge);
 }
 
 void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
     assert(sg_.contains(new_from));
     assert(sg_.contains(new_to));
 
-    EdgeData* sg_edge;
+    Edge* sg_edge;
     if (sg_.contains(edge)) {
         sg_edge = sg_.data_.edges[edge].get();
+        frame().changes.push(
+            Frame::ModifyEdge(*sg_edge, sg_edge->from_, sg_edge->to_));
         sg_edge->unlink();
     } else {
-        sg_.data_.edges[edge] = std::make_unique<EdgeData>(edge);
+        sg_.data_.edges[edge] = std::make_unique<Edge>(edge);
         sg_edge               = sg_.data_.edges[edge].get();
+        frame().changes.push(Frame::AddEdge(edge));
     }
 
     editor_.edit_edge(edge, new_from, new_to);
 
-    sg_edge->to   = sg_.data_.nodes[new_to].get();
-    sg_edge->from = sg_.data_.nodes[new_from].get();
+    sg_edge->to_   = sg_.data_.nodes[new_to].get();
+    sg_edge->from_ = sg_.data_.nodes[new_from].get();
 
     sg_edge->link();
 }
 
 void SubGraphEditor::remove_edge(EdgeId edge) {
     assert(sg_.contains(edge));
-    const auto& e = sg_.get_edge(edge);
-    sg_.data_.edges.at(edge)->unlink();
+
+    auto e = std::move(sg_.data_.edges[edge]);
+    e->unlink();
+    frame().changes.push(Frame::RemoveEdge(std::move(e)));
     sg_.data_.edges.erase(edge);
+
     editor_.remove_edge(edge);
+    sg_.invalid_edge_cache = true;
+}
+
+auto SubGraphEditor::frame() -> Frame& {
+    assert(!frames.empty() &&
+           "Using the graph editor without a frame. You need to call `push` "
+           "before using the editor");
+    return frames.top();
 }
 
 void SubGraphEditor::push() {
     editor_.push();
-    frames_.emplace();
-
-    frames_.top().selected_nodes.reserve(sg_.node_count());
-    for (const auto& node : sg_.nodes()) {
-        frames_.top().selected_nodes.push_back(node);
-    }
+    frames.emplace();
 }
 
 // TODO: OPTIMIZE
 void SubGraphEditor::pop() {
-    editor_.pop();
+    auto& f = frames.top();
 
-    auto frame = frames_.top();
-    frames_.pop();
-
-    sg_.data_.nodes.clear();
-    sg_.data_.edges.clear();
-
-    for (const auto node : frame.selected_nodes) {
-        select_node(node);
+    while (!f.changes.empty()) {
+        auto& change = f.changes.top();
+        std::visit([this](auto& change) { change.revert(this->sg_); }, change);
+        f.changes.pop();
     }
+
+    frames.pop();
+
+    editor_.pop();
 }
 
 void SubGraphEditor::commit() {
     editor_.commit();
 
-    frames_ = std::stack<Frame>{};
+    frames = std::stack<Frame>{};
 }
 
 // =============================================================================

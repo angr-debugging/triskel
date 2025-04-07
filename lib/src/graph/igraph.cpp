@@ -13,105 +13,74 @@
 using namespace triskel;
 
 // =============================================================================
-// EdgeData
+// Edge
 // =============================================================================
 /// @brief Adds an edge to each of its nodes
-void EdgeData::link() {
+void Edge::link() {
     // Child edges go in the back
-    from->edges.push_back(this);
+    from_->edges_.push_back(this);
 
     // Parent edges go in the front
-    to->edges.insert(to->edges.begin(), this);
-    to->separator++;
+    to_->edges_.insert(to_->edges_.begin(), this);
+    to_->separator_++;
 }
 
 /// @brief Removes an edge from each of its nodes
-void EdgeData::unlink() {
-    std::erase(from->edges, this);
-    std::erase(to->edges, this);
-    to->separator--;
+void Edge::unlink() {
+    std::erase(from_->edges_, this);
+    std::erase(to_->edges_, this);
+    to_->separator_--;
 }
 
 // =============================================================================
 // Nodes
 // =============================================================================
-Node::Node(const NodeData& n) : n_{&n} {}
-
 auto Node::id() const -> NodeId {
-    return n_->id;
+    return id_;
 }
 
 auto Node::neighbor_count() const -> size_t {
-    return n_->edges.size();
+    return edges_.size();
 }
 
 auto Node::children_count() const -> size_t {
-    return n_->edges.size() - n_->separator;
+    return edges_.size() - separator_;
 }
 
 auto Node::parent_count() const -> size_t {
-    return n_->separator;
+    return separator_;
 }
 
-auto Node::edges() const -> std::generator<Edge> {
-    for (const auto* edge : n_->edges) {
-        co_yield Edge{*edge};
-    }
+auto Node::edges() const -> Container<Edge*> {
+    return {edges_};
 }
 
-auto Node::child_edges() const -> std::generator<Edge> {
-    for (size_t i = n_->separator; i < n_->edges.size(); ++i) {
-        co_yield Edge{*n_->edges[i]};
-    }
+auto Node::child_edges() const -> Container<Edge*> {
+    return Container<Edge*>(edges_).subspan(separator_);
 }
 
-auto Node::parent_edges() const -> std::generator<Edge> {
-    for (size_t i = 0; i < n_->separator; ++i) {
-        co_yield Edge{*n_->edges[i]};
-    }
-}
-
-auto Node::neighbors() const -> std::generator<Node> {
-    for (const auto* edge : n_->edges) {
-        if (edge->to == n_) {
-            co_yield Node{*edge->from};
-        } else {
-            co_yield Node{*edge->to};
-        }
-    }
-}
-
-auto Node::child_nodes() const -> std::generator<Node> {
-    for (size_t i = n_->separator; i < n_->edges.size(); ++i) {
-        co_yield Node{*n_->edges[i]->to};
-    }
-}
-
-auto Node::parent_nodes() const -> std::generator<Node> {
-    for (size_t i = 0; i < n_->separator; ++i) {
-        co_yield Node{*n_->edges[i]->from};
-    }
+auto Node::parent_edges() const -> Container<Edge*> {
+    return Container<Edge*>(edges_).subspan(0, separator_);
 }
 
 // =============================================================================
 // Edges
 // =============================================================================
-Edge::Edge(const EdgeData& e) : e_{&e} {}
 
 auto Edge::id() const -> EdgeId {
-    return e_->id;
+    return id_;
 }
 
-auto Edge::from() const -> Node {
-    return {*e_->from};
+auto Edge::from() const -> Node* {
+    return from_;
 }
 
-auto Edge::to() const -> Node {
-    return {*e_->to};
+auto Edge::to() const -> Node* {
+    return to_;
 }
 
-auto Edge::other(NodeId n) const -> Node {
-    if (n == to()) {
+auto Edge::other(NodeId n) const -> Node* {
+    if (n == *to()) {
         return from();
     }
 
@@ -126,21 +95,21 @@ auto triskel::format_as(const Node& n) -> std::string {
 }
 
 auto triskel::format_as(const Edge& e) -> std::string {
-    return fmt::format("{} -> {}", e.from(), e.to());
+    return fmt::format("{} -> {}", *e.from_, *e.to_);
 }
 
-auto triskel::format_as(const IGraph& g) -> std::string {
+auto triskel::format_as(IGraph& g) -> std::string {
     auto s = std::string{"digraph G {\n"};
 
-    for (auto node : g.nodes()) {
-        s += fmt::format("{}\n", node);
+    for (auto* node : g.nodes()) {
+        s += fmt::format("{}\n", *node);
     }
-    s += fmt::format("{} [shape=square]", g.root());
+    s += fmt::format("{} [shape=square]", *g.root());
 
     s += "\n";
 
-    for (auto edge : g.edges()) {
-        s += fmt::format("{}\n", edge);
+    for (auto* edge : g.edges()) {
+        s += fmt::format("{}\n", *edge);
     }
 
     s += "}\n";

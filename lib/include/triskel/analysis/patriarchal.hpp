@@ -2,6 +2,7 @@
 /// nodes having parents, childrens, ancestors and descendants
 #pragma once
 
+#include "triskel/graph/igraph.hpp"
 #include "triskel/utils/attribute.hpp"
 
 namespace triskel {
@@ -12,44 +13,40 @@ struct Patriarchal {
     virtual ~Patriarchal() = default;
 
     /// @brief Gets this node's parent
-    [[nodiscard]] auto parents(NodeId id) -> std::generator<Node>;
+    [[nodiscard]] auto parents(const Node* node) -> Container<const Node*>;
 
     /// @brief Gets this node's only parent.
     /// If this node has multiple parents raises an error
-    [[nodiscard]] auto parent(NodeId id) -> Node;
-
-    /// @brief Gets this node's only parent.
-    /// If this node has multiple parents raises an error
-    [[nodiscard]] auto parent_id(NodeId id) const -> NodeId;
+    [[nodiscard]] auto parent(const Node* node) const -> const Node*;
 
     /// @brief The number of children of a node
-    [[nodiscard]] auto parent_count(NodeId id) -> size_t;
+    [[nodiscard]] auto parent_count(const Node* node) -> size_t;
 
     /// @brief Gets this node's children
-    [[nodiscard]] auto children(NodeId id) -> std::generator<Node>;
+    [[nodiscard]] auto children(const Node* node) -> Container<const Node*>;
 
     /// @brief Gets this node's only child.
     /// If this node has multiple children raises an error
-    [[nodiscard]] auto child(NodeId id) -> Node;
+    [[nodiscard]] auto child(const Node* node) const -> const Node*;
 
     /// @brief The number of children of a node
-    [[nodiscard]] auto children_count(NodeId id) -> size_t;
+    [[nodiscard]] auto children_count(const Node* node) -> size_t;
 
     /// @brief Does node n1 precede n2 ?
     /// Checks using a node's children
-    [[nodiscard]] auto precedes(NodeId n1, NodeId n2) -> bool;
+    [[nodiscard]] auto precedes(const Node* n1, const Node* n2) -> bool;
 
     /// @brief Does node n1 succeed n2 ?
     /// Checks using a node's parents
-    [[nodiscard]] auto succeed(NodeId n1, NodeId n2) -> bool;
+    [[nodiscard]] auto succeed(const Node* n1, const Node* n2) -> bool;
 
    protected:
     /// @brief Makes a node a parent of another node
-    void add_parent(NodeId parent, NodeId child);
+    void add_parent(const Node* parent, const Node* child);
 
    private:
     const IGraph& g_;
-    NodeAttribute<std::vector<NodeId>> parents_;
-    NodeAttribute<std::vector<NodeId>> children_;
+    NodeAttribute<std::vector<const Node*>> parents_;
+    NodeAttribute<std::vector<const Node*>> children_;
 };
 }  // namespace triskel

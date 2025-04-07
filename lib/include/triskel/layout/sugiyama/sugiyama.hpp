@@ -117,8 +117,8 @@ struct SugiyamaAnalysis : public ILayout {
     // Ensures the order on each layer has nodes 1 unit from each other
     void normalize_order();
 
-    std::vector<EdgeId> self_loops_;
-    void remove_self_loop(const Edge& edge);
+    std::vector<const Edge*> self_loops_;
+    void remove_self_loop(const Edge* edge);
 
     void draw_self_loops();
 
@@ -148,16 +148,17 @@ struct SugiyamaAnalysis : public ILayout {
                                          size_t next_layer,
                                          float graph_width);
 
-    auto get_priority(const Node& node, size_t layer) -> size_t;
+    auto get_priority(const Node* node, size_t layer) -> size_t;
 
-    auto min_x(std::vector<Node>& nodes, size_t id) -> float;
+    auto min_x(std::vector<const Node*>& nodes, size_t id) -> float;
 
-    auto max_x(std::vector<Node>& nodes, size_t id, float graph_width) -> float;
-
-    auto average_position(const Node& node, size_t layer, bool is_going_down)
+    auto max_x(std::vector<const Node*>& nodes, size_t id, float graph_width)
         -> float;
 
-    void set_layer(const Node& node, size_t layer);
+    auto average_position(const Node* node, size_t layer, bool is_going_down)
+        -> float;
+
+    void set_layer(const Node* node, size_t layer);
 
     /// @brief Creates waypoints to draw the edges connecting nodes
     void waypoint_creation();
@@ -169,16 +170,16 @@ struct SugiyamaAnalysis : public ILayout {
     void calculate_waypoints_y();
 
     auto get_waypoint_y(size_t id,
-                        const std::vector<Edge>& edges,
+                        const std::vector<const Edge*>& edges,
                         std::vector<int64_t>& layers) -> int64_t;
 
     /// @brief Creates an edge waypoint and sets its layer
-    auto create_ghost_node(size_t layer) -> Node;
+    auto create_ghost_node(size_t layer) -> Node*;
 
     /// @brief Creates an edge waypoint
-    auto create_waypoint() -> Node;
+    auto create_waypoint() -> Node*;
 
-    void build_waypoints(EdgeId id);
+    void build_waypoints(const Edge* edge);
     void build_long_edges_waypoints();
 
     float width_;
@@ -198,9 +199,9 @@ struct SugiyamaAnalysis : public ILayout {
     EdgeAttribute<float> start_x_offset_;
     EdgeAttribute<float> end_x_offset_;
 
-    std::map<Pair, EdgeId> io_edges_;
+    std::map<Pair, const Edge*> io_edges_;
 
-    [[nodiscard]] auto is_io_edge(EdgeId edge) const -> bool;
+    [[nodiscard]] auto is_io_edge(const Edge* edge) const -> bool;
 
     std::map<Pair, std::vector<Point>> io_waypoints_;
 
@@ -214,17 +215,17 @@ struct SugiyamaAnalysis : public ILayout {
     bool has_bottom_loop_ = false;
 
     // std::vector<Point> exit_waypoints_;
-    // EdgeId exit_edge_ = EdgeId::InvalidID;
+    // const Edge* exit_edge_ = const Edge*::InvalidID;
 
-    EdgeAttribute<std::vector<EdgeId>> edge_waypoints_;
-    std::vector<EdgeId> deleted_edges_;
+    EdgeAttribute<std::vector<const Edge*>> edge_waypoints_;
+    std::vector<const Edge*> deleted_edges_;
 
     EdgeAttribute<bool> is_flipped_;
 
-    std::vector<NodeId> dummy_nodes_;
+    std::vector<const Node*> dummy_nodes_;
 
     /// @brief The nodes on a given layer
-    std::vector<std::vector<Node>> node_layers_;
+    std::vector<std::vector<const Node*>> node_layers_;
     void init_node_layers();
 
     std::default_random_engine rng_;

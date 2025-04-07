@@ -1,10 +1,9 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
-#include <memory>
 #include <stack>
 #include <variant>
+#include "triskel/graph/frame.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/graph/owning_graph.hpp"
 
@@ -22,9 +21,9 @@ struct GraphEditor : public IGraphEditor {
 
     auto operator=(const GraphEditor&) -> GraphEditor& = delete;
 
-    auto make_node() -> Node override;
+    auto make_node() -> Node* override;
     void remove_node(NodeId id) override;
-    auto make_edge(NodeId from, NodeId to) -> Edge override;
+    auto make_edge(NodeId from, NodeId to) -> Edge* override;
     void edit_edge(EdgeId id, NodeId new_from, NodeId new_to) override;
     void remove_edge(EdgeId id) override;
     void push() override;
@@ -35,54 +34,9 @@ struct GraphEditor : public IGraphEditor {
     size_t next_node_id_ = 0;
     size_t next_edge_id_ = 0;
 
-    struct Frame {
-        struct Modification {
-            ~Modification()                          = default;
-            virtual void revert(GraphEditor& editor) = 0;
-        };
-
-        struct MakeNode : public Modification {
-            explicit MakeNode(NodeId id) : id{id} {}
-            void revert(GraphEditor& editor) override;
-            NodeId id;
-        };
-
-        struct RemoveNode : public Modification {
-            explicit RemoveNode(std::unique_ptr<NodeData>&& node)
-                : node{std::move(node)} {}
-            void revert(GraphEditor& editor) override;
-            std::unique_ptr<NodeData> node;
-        };
-
-        struct AddEdge : public Modification {
-            explicit AddEdge(EdgeId id) : id{id} {}
-            void revert(GraphEditor& editor) override;
-            EdgeId id;
-        };
-
-        struct RemoveEdge : public Modification {
-            explicit RemoveEdge(std::unique_ptr<EdgeData>&& edge)
-                : edge{std::move(edge)} {}
-            void revert(GraphEditor& editor) override;
-            std::unique_ptr<EdgeData> edge;
-        };
-
-        struct ModifyEdge : public Modification {
-            explicit ModifyEdge(const EdgeData& edge) : edge{edge} {}
-            void revert(GraphEditor& editor) override;
-            EdgeData edge;
-        };
-
-        auto operator=(const Frame&) -> Frame& = delete;
-
-        std::stack<
-            std::variant<MakeNode, RemoveNode, AddEdge, RemoveEdge, ModifyEdge>>
-            changes;
-    };
-
     auto frame() -> Frame&;
 
-    auto make_edge(EdgeId id, NodeId from, NodeId to) -> EdgeData&;
+    auto make_edge(EdgeId id, NodeId from, NodeId to) -> Edge*;
 
     Graph& g_;
     std::stack<Frame> frames;

@@ -32,10 +32,10 @@ struct Attribute {
     template <typename U = T>
     [[nodiscard]] auto get(const ID<Tag>& id)
         -> T& requires(!std::is_same_v<U, bool>) {
-        auto id_ = static_cast<size_t>(id);
-        resize_if_necessary(id_);
-        return data_[id_];
-    }
+            auto id_ = static_cast<size_t>(id);
+            resize_if_necessary(id_);
+            return data_[id_];
+        }
 
     /// @brief Get by reference
     [[nodiscard]] auto get(const Identifiable<Tag>& n) ->
@@ -83,6 +83,23 @@ struct Attribute {
         return get(id);
     }
 
+    template <typename U = T>
+    [[nodiscard]] auto operator[](const Identifiable<Tag>* id)
+        -> T& requires(!std::is_same_v<U, bool>) { return get(*id); }
+
+    [[nodiscard]] auto operator[](const Identifiable<Tag>* id) ->
+        typename std::vector<bool>::reference
+        requires(std::is_same_v<T, bool>)
+    {
+        return get(*id);
+    }
+
+    template <typename U = T>
+    [[nodiscard]] auto operator[](const Identifiable<Tag>* id) const
+        -> ConstRef {
+        return get(*id);
+    }
+
     void set(const ID<Tag>& id, T v) {
         auto id_ = static_cast<size_t>(id);
         resize_if_necessary(id_);
@@ -115,7 +132,7 @@ struct NodeAttribute : public Attribute<NodeTag, T> {
 
     [[nodiscard]] auto dump(IGraph& g) const -> std::string {
         auto s = std::string{};
-        for (auto node : g.nodes()) {
+        for (auto* node : g.nodes()) {
             s += fmt::format("- {} -> {}\n", node, this->get(node));
         }
         return s;
@@ -132,7 +149,7 @@ struct EdgeAttribute : public Attribute<EdgeTag, T> {
 
     [[nodiscard]] auto dump(IGraph& g) const -> std::string {
         auto s = std::string{};
-        for (auto edge : g.edges()) {
+        for (auto* edge : g.edges()) {
             s += fmt::format("- {} -> {}\n", edge, this->get(edge));
         }
         return s;

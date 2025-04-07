@@ -23,49 +23,47 @@ UDFS::UnorderedDFSAnalysis(const IGraph& g)
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void UDFS::udfs(const Node& node) {
-    nodes_.push_back(node.id());
-    dfs_nums_.set(node, nodes_.size() - 1);
+void UDFS::udfs(const Node* node) {
+    nodes_.push_back(node);
+    dfs_nums_[node] = nodes_.size() - 1;
 
-    for (const auto& edge : node.edges()) {
-        const auto& child = edge.other(node);
+    for (const auto* edge : node->edges()) {
+        const auto& child = edge->other(*node);
 
         if (!was_visited(child)) {
             udfs(child);
 
             add_parent(node, child);
-            types_.set(edge, UDFS::EdgeType::Tree);
+            types_[edge] = UDFS::EdgeType::Tree;
             continue;
         }
 
-        if (types_.get(edge) == UDFS::EdgeType::None) {
-            types_.set(edge, UDFS::EdgeType::Back);
+        if (types_[edge] == UDFS::EdgeType::None) {
+            types_[edge] = UDFS::EdgeType::Back;
         }
     }
 }
 
-auto UDFS::was_visited(const Node& node) -> bool {
-    return (dfs_nums_.get(node) != 0) || (node == g_.root());
+auto UDFS::was_visited(const Node* node) -> bool {
+    return (dfs_nums_[node] != 0) || (node == g_.root());
 }
 
-auto UDFS::nodes() -> std::generator<Node> {
-    for (const auto& node : nodes_) {
-        co_yield g_.get_node(node);
-    }
+auto UDFS::nodes() -> Container<const Node*> {
+    return {nodes_};
 }
 
-auto UDFS::is_tree(const Edge& e) -> bool {
-    return types_.get(e) == EdgeType::Tree;
+auto UDFS::is_tree(const Edge* e) -> bool {
+    return types_[e] == EdgeType::Tree;
 }
 
-auto UDFS::is_backedge(const Edge& e) -> bool {
-    return types_.get(e) == EdgeType::Back;
+auto UDFS::is_backedge(const Edge* e) -> bool {
+    return types_[e] == EdgeType::Back;
 }
 
-void UDFS::set_backedge(const Edge& e) {
-    types_.set(e, EdgeType::Back);
+void UDFS::set_backedge(const Edge* e) {
+    types_[e] = EdgeType::Back;
 }
 
-auto UDFS::dfs_num(const Node& n) -> size_t {
-    return dfs_nums_.get(n);
+auto UDFS::dfs_num(const Node* n) -> size_t {
+    return dfs_nums_[n];
 }

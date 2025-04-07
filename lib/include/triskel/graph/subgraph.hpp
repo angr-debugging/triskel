@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include "triskel/graph/frame.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/graph/owning_graph.hpp"
 
@@ -12,20 +13,21 @@ struct SubGraphEditor : public IGraphEditor {
     /// @brief A graph editor with source control
     explicit SubGraphEditor(SubGraph& g);
 
+    explicit SubGraphEditor(const SubGraphEditor&)           = delete;
     auto operator=(const SubGraphEditor&) -> SubGraphEditor& = delete;
 
     /// @brief Adds a node from the graph to the subgraph
-    void select_node(NodeId id);
+    void select_node(NodeId id, bool use_frame = false);
 
     /// @brief Removes a node from the subgraph
-    void unselect_node(NodeId id);
+    void unselect_node(NodeId id, bool use_frame = false);
 
     /// @brief Make root
     void make_root(NodeId node);
 
-    auto make_node() -> Node override;
+    auto make_node() -> Node* override;
     void remove_node(NodeId node) override;
-    auto make_edge(NodeId from, NodeId to) -> Edge override;
+    auto make_edge(NodeId from, NodeId to) -> Edge* override;
     void edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) override;
     void remove_edge(EdgeId edge) override;
     void push() override;
@@ -36,19 +38,17 @@ struct SubGraphEditor : public IGraphEditor {
     SubGraph& sg_;
     IGraphEditor& editor_;
 
-    struct Frame {
-        std::vector<NodeId> selected_nodes;
-    };
-    std::stack<Frame> frames_;
+    auto frame() -> Frame&;
+    std::stack<Frame> frames;
 
     /// @brief Add an edge to the subgraph
-    void select_edge(const Edge& edge);
+    void select_edge(const Edge* edge, bool use_frame);
 
     /// @brief Add a node's edges to the subgraph
-    void select_edges(NodeId node);
+    void select_edges(NodeId node, bool use_frame);
 
     /// @brief Remove a node's edges to the subgraph
-    void unselect_edges(NodeId node);
+    void unselect_edges(NodeId node, bool use_frame);
 };
 
 /// @brief A graph that contains only some nodes of another graph

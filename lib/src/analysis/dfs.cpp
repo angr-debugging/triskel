@@ -24,17 +24,17 @@ DFS::DFSAnalysis(const IGraph& g)
     type_edges();
 }
 
-auto DFS::was_visited(const Node& node) -> bool {
-    return (dfs_nums_.get(node) != 0) || node == g_.root();
+auto DFS::was_visited(const Node* node) -> bool {
+    return (dfs_nums_[node] != 0) || node == g_.root();
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void DFS::dfs(const Node& node) {
-    nodes_.push_back(node.id());
-    dfs_nums_.set(node, nodes_.size() - 1);
+void DFS::dfs(const Node* node) {
+    nodes_.push_back(node);
+    dfs_nums_[node] = nodes_.size() - 1;
 
-    for (const auto& edge : node.child_edges()) {
-        const auto child = edge.to();
+    for (const auto* edge : node->child_edges()) {
+        const auto& child = edge->to();
         if (child == node) {
             continue;
         }
@@ -43,41 +43,39 @@ void DFS::dfs(const Node& node) {
             dfs(child);
 
             add_parent(node, child);
-            types_.set(edge, DFS::EdgeType::Tree);
+            types_[*edge] = DFS::EdgeType::Tree;
             continue;
         }
     }
 }
 
 void DFS::type_edges() {
-    for (const auto& edge : g_.edges()) {
-        if (is_tree(edge)) {
+    for (const auto* edge : g_.edges()) {
+        if (is_tree(*edge)) {
             continue;
         }
 
-        if (edge.to() == edge.from()) {
-            types_.set(edge, DFS::EdgeType::Back);
+        if (edge->to() == edge->from()) {
+            types_.set(*edge, DFS::EdgeType::Back);
             continue;
         }
 
-        if (succeed(edge.from(), edge.to())) {
-            types_.set(edge, DFS::EdgeType::Back);
+        if (succeed(edge->from(), edge->to())) {
+            types_.set(*edge, DFS::EdgeType::Back);
             continue;
         }
 
-        if (succeed(edge.to(), edge.from())) {
-            types_.set(edge, DFS::EdgeType::Forward);
+        if (succeed(edge->to(), edge->from())) {
+            types_.set(*edge, DFS::EdgeType::Forward);
             continue;
         }
 
-        types_.set(edge, DFS::EdgeType::Cross);
+        types_.set(*edge, DFS::EdgeType::Cross);
     }
 }
 
-auto DFS::nodes() -> std::generator<Node> {
-    for (const auto& node : nodes_) {
-        co_yield g_.get_node(node);
-    }
+auto DFS::nodes() -> Container<const Node*> {
+    return {nodes_};
 }
 
 auto DFS::is_tree(EdgeId e) const -> bool {
@@ -111,6 +109,6 @@ auto DFS::dump_type(EdgeId e) const -> std::string {
     }
 }
 
-auto DFS::dfs_num(NodeId n) const -> size_t {
-    return dfs_nums_.get(n);
+auto DFS::dfs_num(const Node* n) const -> size_t {
+    return dfs_nums_[n];
 }

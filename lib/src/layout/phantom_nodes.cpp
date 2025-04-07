@@ -18,6 +18,7 @@
 #include "triskel/analysis/lengauer_tarjan.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/attribute.hpp"
+#include "triskel/utils/generator.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
@@ -61,17 +62,17 @@ struct RNode {
         }
     }
 
-    void new_child(const Node& n, const std::span<size_t>& n_radix) {
+    void new_child(const Node* n, const std::span<size_t>& n_radix) {
         assert(!n_radix.empty());
 
         auto node = std::make_unique<RNode>();
         node->radix.assign(n_radix.begin(), n_radix.end());
-        node->node_ids = {n};
+        node->node_ids = {*n};
 
         children[n_radix.front()] = std::move(node);
     }
 
-    void split(const Node& n, const std::span<size_t>& n_radix) {
+    void split(const Node* n, const std::span<size_t>& n_radix) {
         auto i = 0;
 
         auto size = std::min(radix.size(), n_radix.size());
@@ -102,7 +103,7 @@ struct RNode {
         children[radix[i]] = std::move(new_node);
 
         if (i == n_radix.size()) {
-            node_ids.push_back(n);
+            node_ids.push_back(*n);
         } else {
             new_child(n, n_radix.subspan(i));
         }
@@ -116,7 +117,7 @@ struct RTree {
     RTree() = default;
 
     // Insert a list into the radix tree
-    void insert(const Node& n, const std::span<size_t>& keys) {
+    void insert(const Node* n, const std::span<size_t>& keys) {
         auto* cursor = &root;
 
         size_t i = 0;
@@ -143,7 +144,7 @@ struct RTree {
         }
 
         // An element with this key is already in the tree
-        cursor->node_ids.push_back(n);
+        cursor->node_ids.push_back(*n);
     }
 
     [[nodiscard]] auto bfs() -> std::vector<RNode*> {
@@ -179,11 +180,12 @@ struct RTree {
 };
 
 // Split the entry edges using a radix tree
-void split_node(IGraph& graph, const Node& node, DFSNums& keys) {
+void split_node(IGraph& graph, const Node* node, DFSNums& keys) {
     auto& editor = graph.editor();
     auto rtree   = RTree{};
 
-    for (const auto& parent : node.parent_nodes()) {
+    for (const auto& parent_edge : node->parent_edges()) {
+        const auto& parent = parent_edge->from();
         rtree.insert(parent, keys[parent]);
     }
 
@@ -200,35 +202,36 @@ void split_node(IGraph& graph, const Node& node, DFSNums& keys) {
         }
 
         // We need to create a new node for this element
-        auto node                 = editor.make_node();
-        rnode_to_graph[rnode->id] = node.id();
+        auto* node                = editor.make_node();
+        rnode_to_graph[rnode->id] = node->id();
 
         // Creates an edge from each of the children to the parent
         for (auto& child : rnode->children) {
             auto child_id = rnode_to_graph.at(child.second->id);
-            editor.make_edge(child_id, node);
+            editor.make_edge(child_id, *node);
         }
 
         // Create an edge from each leaf to the parent
         for (auto& leaf_id : rnode->node_ids) {
-            editor.make_edge(leaf_id, node);
+            editor.make_edge(leaf_id, *node);
         }
     }
 
     // Deletes all the edges to the node
-    for (const auto& edge : node.parent_edges()) {
-        editor.remove_edge(edge);
+    const auto parent_edges = span_to_vec(node->parent_edges());
+    for (const auto* edge : parent_edges) {
+        editor.remove_edge(*edge);
     }
 
     // Adds an edge from the root to our node
-    editor.make_edge(rnode_to_graph.at(rtree.root.id), node);
+    editor.make_edge(rnode_to_graph.at(rtree.root.id), *node);
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-auto make_keys(NodeId root,
+auto make_keys(const Node* root,
                NodeAttribute<std::vector<size_t>>& keys,
-               NodeAttribute<NodeId>& idoms,
-               NodeId node) -> std::vector<size_t> {
+               NodeAttribute<const Node*>& idoms,
+               const Node* node) -> std::vector<size_t> {
     auto& nums = keys[node];
 
     if (!nums.empty()) {
@@ -239,10 +242,10 @@ auto make_keys(NodeId root,
         return nums;
     }
 
-    auto idom     = idoms[node];
-    auto previous = make_keys(root, keys, idoms, idom);
-    nums          = std::vector<size_t>(previous);
-    nums.push_back(static_cast<size_t>(idom));
+    const auto* idom = idoms[node];
+    auto previous    = make_keys(root, keys, idoms, idom);
+    nums             = std::vector<size_t>(previous);
+    nums.push_back(static_cast<size_t>(idom->id()));
 
     return nums;
 }
@@ -254,27 +257,28 @@ void triskel::create_phantom_nodes(IGraph& g) {
 
     auto keys = NodeAttribute<std::vector<size_t>>{g, {}};
 
-    for (const auto& node : g.nodes()) {
+    for (const auto* node : g.nodes()) {
         make_keys(g.root(), keys, idoms, node);
     }
 
     auto& editor = g.editor();
 
-    for (const auto& node : g.nodes()) {
-        if (node.parent_count() >= 3) {
+    for (const auto* node : g.nodes()) {
+        if (node->parent_count() >= 3) {
             split_node(g, node, keys);
             continue;
         }
 
-        if (node.children_count() > 1 && node.parent_count() > 1) {
+        if (node->children_count() > 1 && node->parent_count() > 1) {
             // Create a single parent for this node
-            auto parent = editor.make_node();
+            auto* parent = editor.make_node();
 
-            for (const auto& edge : node.parent_edges()) {
-                editor.edit_edge(edge, edge.from(), parent);
+            const auto parent_edges = span_to_vec(node->parent_edges());
+            for (const auto* edge : parent_edges) {
+                editor.edit_edge(*edge, *edge->from(), *parent);
             }
 
-            editor.make_edge(parent, node);
+            editor.make_edge(*parent, *node);
         }
     }
 }

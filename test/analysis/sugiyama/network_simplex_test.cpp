@@ -16,30 +16,30 @@ TEST(NetworkSimplex, CutValue1) {
     auto& ge   = graph.editor();
     ge.push();
 
-    auto a = ge.make_node();
-    auto b = ge.make_node();
-    auto c = ge.make_node();
-    auto d = ge.make_node();
-    auto e = ge.make_node();
-    auto f = ge.make_node();
-    auto g = ge.make_node();
-    auto h = ge.make_node();
+    auto* a = ge.make_node();
+    auto* b = ge.make_node();
+    auto* c = ge.make_node();
+    auto* d = ge.make_node();
+    auto* e = ge.make_node();
+    auto* f = ge.make_node();
+    auto* g = ge.make_node();
+    auto* h = ge.make_node();
 
-    auto ea_e = ge.make_edge(a, e);
-    auto ea_f = ge.make_edge(a, f);
-    auto ea_b = ge.make_edge(a, b);
+    auto* ea_e = ge.make_edge(*a, *e);
+    auto* ea_f = ge.make_edge(*a, *f);
+    auto* ea_b = ge.make_edge(*a, *b);
 
-    auto eb_c = ge.make_edge(b, c);
+    auto* eb_c = ge.make_edge(*b, *c);
 
-    auto ec_d = ge.make_edge(c, d);
+    auto* ec_d = ge.make_edge(*c, *d);
 
-    auto ed_h = ge.make_edge(d, h);
+    auto* ed_h = ge.make_edge(*d, *h);
 
-    auto ee_g = ge.make_edge(e, g);
+    auto* ee_g = ge.make_edge(*e, *g);
 
-    auto ef_g = ge.make_edge(f, g);
+    auto* ef_g = ge.make_edge(*f, *g);
 
-    auto eg_h = ge.make_edge(g, h);
+    auto* eg_h = ge.make_edge(*g, *h);
     ge.commit();
 
     auto st = SpanningTree(graph);
@@ -76,30 +76,30 @@ TEST(NetworkSimplex, CutValue2) {
     auto& ge   = graph.editor();
     ge.push();
 
-    auto a = ge.make_node();
-    auto b = ge.make_node();
-    auto c = ge.make_node();
-    auto d = ge.make_node();
-    auto e = ge.make_node();
-    auto f = ge.make_node();
-    auto g = ge.make_node();
-    auto h = ge.make_node();
+    auto* a = ge.make_node();
+    auto* b = ge.make_node();
+    auto* c = ge.make_node();
+    auto* d = ge.make_node();
+    auto* e = ge.make_node();
+    auto* f = ge.make_node();
+    auto* g = ge.make_node();
+    auto* h = ge.make_node();
 
-    auto ea_e = ge.make_edge(a, e);
-    auto ea_f = ge.make_edge(a, f);
-    auto ea_b = ge.make_edge(a, b);
+    auto* ea_e = ge.make_edge(*a, *e);
+    auto* ea_f = ge.make_edge(*a, *f);
+    auto* ea_b = ge.make_edge(*a, *b);
 
-    auto eb_c = ge.make_edge(b, c);
+    auto* eb_c = ge.make_edge(*b, *c);
 
-    auto ec_d = ge.make_edge(c, d);
+    auto* ec_d = ge.make_edge(*c, *d);
 
-    auto ed_h = ge.make_edge(d, h);
+    auto* ed_h = ge.make_edge(*d, *h);
 
-    auto ee_g = ge.make_edge(e, g);
+    auto* ee_g = ge.make_edge(*e, *g);
 
-    auto ef_g = ge.make_edge(f, g);
+    auto* ef_g = ge.make_edge(*f, *g);
 
-    auto eg_h = ge.make_edge(g, h);
+    auto* eg_h = ge.make_edge(*g, *h);
     ge.commit();
 
     auto st = SpanningTree(graph);

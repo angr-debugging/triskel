@@ -96,14 +96,14 @@ struct RecursiveDescent {
             const auto& block = blocks[i];
             const auto& node  = g->get_node(triskel::NodeId{i});
 
-            instructions.set(node, block.insns);
+            instructions[node] = block.insns;
 
             for (const auto& edge : block.children) {
                 const auto& child_node =
                     g->get_node(triskel::NodeId{addr2block[edge.addr]});
 
-                auto e = ge.make_edge(node, child_node);
-                cfg->edge_types.set(e, edge.type);
+                auto* e            = ge.make_edge(*node, *child_node);
+                cfg->edge_types[e] = edge.type;
             }
         }
 
@@ -160,8 +160,8 @@ struct RecursiveDescent {
         }
     }
 
-    auto add_instruction_to_block(BasicBlock& block,
-                                  size_t addr) -> std::optional<size_t> {
+    auto add_instruction_to_block(BasicBlock& block, size_t addr)
+        -> std::optional<size_t> {
         if (addr2block.contains(addr)) {
             // The next address is in another basic block
             block.children.push_back(ChildEdge{addr});
@@ -261,8 +261,8 @@ struct RecursiveDescent {
 BinaryCFG::BinaryCFG()
     : instructions{0, {}}, edge_types{0, EdgeType::Default} {}
 
-auto make_binary_graph(size_t start_addr,
-                       const Binary& binary) -> std::unique_ptr<BinaryCFG> {
+auto make_binary_graph(size_t start_addr, const Binary& binary)
+    -> std::unique_ptr<BinaryCFG> {
     auto r = RecursiveDescent(start_addr, binary);
     return std::move(r.cfg);
 }

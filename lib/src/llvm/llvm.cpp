@@ -70,15 +70,15 @@ LLVMCFG::LLVMCFG(llvm::Function* function)
     std::map<llvm::BasicBlock*, NodeId> reverse_map;
 
     for (auto& block : *function) {
-        auto node = editor.make_node();
+        auto* node = editor.make_node();
 
         // Adds the block to the maps
-        block_map.set(node, &block);
-        reverse_map.insert_or_assign(&block, node.id());
+        block_map[node] = &block;
+        reverse_map.insert_or_assign(&block, node->id());
     }
 
     for (auto& block : *function) {
-        auto node = graph.get_node(reverse_map.at(&block));
+        auto* node = graph.get_node(reverse_map.at(&block));
 
         llvm::BasicBlock* true_edge  = nullptr;
         llvm::BasicBlock* false_edge = nullptr;
@@ -94,12 +94,12 @@ LLVMCFG::LLVMCFG(llvm::Function* function)
         for (auto* child : llvm::successors(&block)) {
             auto child_node = reverse_map.at(child);
 
-            auto edge = editor.make_edge(node, child_node);
+            auto* edge = editor.make_edge(*node, child_node);
 
             if (child == true_edge) {
-                edge_types.set(edge, EdgeType::True);
+                edge_types[edge] = EdgeType::True;
             } else if (child == false_edge) {
-                edge_types.set(edge, EdgeType::False);
+                edge_types[edge] = EdgeType::False;
             }
         }
     }

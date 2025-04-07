@@ -55,7 +55,7 @@ Layout::Layout(Graph& g,
         for (auto exit_pair : data.exits) {
             auto& exit_waypoints = data.io_waypoints[exit_pair];
             assert(!exit_waypoints.empty());
-            auto& waypoints = waypoints_.get(exit_pair.edge);
+            auto& waypoints = waypoints_[exit_pair.edge];
 
             // Remove the nodes connecting it to the next layer
             waypoints.erase(waypoints.begin());
@@ -69,7 +69,7 @@ Layout::Layout(Graph& g,
         for (auto entry_pair : data.entries) {
             auto& entry_waypoints = data.io_waypoints[entry_pair];
             assert(!entry_waypoints.empty());
-            auto& waypoints = waypoints_.get(entry_pair.edge);
+            auto& waypoints = waypoints_[entry_pair.edge];
 
             // Remove the nodes connecting it to the next layer
             waypoints.pop_back();
@@ -96,10 +96,10 @@ void Layout::remove_small_regions() {
         auto& region = small_regions.back();
         small_regions.pop_back();
 
-        auto node_id = (*region)->nodes.front();
+        const auto* node_id = (*region)->nodes.front();
 
         region->parent()->nodes.push_back(node_id);
-        sese_->node_regions.set(node_id, &region->parent());
+        sese_->node_regions[node_id] = &region->parent();
 
         sese_->regions.remove_node(region);
     }
@@ -111,10 +111,10 @@ void Layout::remove_small_regions() {
 }
 
 void Layout::create_region_subgraphs() {
-    for (const auto& node : g_.nodes()) {
+    for (const auto* node : g_.nodes()) {
         const auto& r = sese_->get_region(node);
         auto& editor  = get_editor(r);
-        editor.select_node(node);
+        editor.select_node(*node);
     }
 }
 
@@ -122,8 +122,8 @@ void Layout::create_region_nodes() {
     auto& editor = g_.editor();
 
     for (const auto& r : sese_->regions.nodes) {
-        auto& data   = regions_data_[r->id];
-        data.node_id = editor.make_node().id();
+        auto& data    = regions_data_[r->id];
+        data.node_ptr = editor.make_node();
     }
 
     // Adds the region nodes to the appropriate regions
@@ -134,51 +134,51 @@ void Layout::create_region_nodes() {
 
         const auto& parent_region = r->parent();
         auto& editor = regions_data_[parent_region.id].subgraph->editor();
-        editor.select_node(regions_data_[r->id].node_id);
+        editor.select_node(*regions_data_[r->id].node_ptr);
     }
 }
 
 void Layout::edit_region_entry(const SESE::SESERegion& r) {
-    auto entry_id = r->entry_edge;
-    if (entry_id == EdgeId::InvalidID) {
+    const auto* entry_id = r->entry_edge;
+    if (entry_id == nullptr) {
         return;
     }
 
-    const auto entry = g_.get_edge(entry_id);
+    const auto& entry = *entry_id;
 
     const auto& parent_region = r.parent();
     const auto& from_region   = sese_->get_region(entry.from());
 
-    auto to_node = get_region_node(r);
+    const auto* to_node = get_region_node(r);
 
-    auto from_node = from_region == parent_region
-                         ? entry.from()
-                         : get_region_node(from_region);
+    const auto* from_node = from_region == parent_region
+                                ? entry.from()
+                                : get_region_node(from_region);
 
     auto& ge = get_editor(parent_region);
-    ge.select_node(to_node);
-    ge.edit_edge(entry, from_node, to_node);
+    ge.select_node(*to_node);
+    ge.edit_edge(entry, *from_node, *to_node);
 }
 
 void Layout::edit_region_exit(const SESE::SESERegion& r) {
-    auto exit_id = r->exit_edge;
-    if (exit_id == EdgeId::InvalidID) {
+    const auto* exit_id = r->exit_edge;
+    if (exit_id == nullptr) {
         return;
     }
 
-    const auto exit = g_.get_edge(exit_id);
+    const auto& exit = exit_id;
 
     const auto& parent_region = r.parent();
-    const auto& to_region     = sese_->get_region(exit.to());
+    const auto& to_region     = sese_->get_region(exit->to());
 
-    auto from_node = get_region_node(r);
+    const auto& from_node = get_region_node(r);
 
-    auto to_node =
-        to_region == parent_region ? exit.to() : get_region_node(to_region);
+    const auto& to_node =
+        to_region == parent_region ? exit->to() : get_region_node(to_region);
 
     auto& ge = get_editor(parent_region);
-    ge.select_node(to_node);
-    ge.edit_edge(exit, from_node, to_node);
+    ge.select_node(*to_node);
+    ge.edit_edge(*exit, *from_node, *to_node);
 }
 
 namespace {
@@ -228,72 +228,72 @@ auto is_region_successor(const SESE::SESERegion& region,
 
 void Layout::edit_region_subgraph() {
     // return;
-    for (const auto& edge : g_.edges()) {
-        const auto* from_region = &sese_->get_region(edge.from());
-        const auto* to_region   = &sese_->get_region(edge.to());
+    for (const auto* edge : g_.edges()) {
+        const auto* from_region = &sese_->get_region(edge->from());
+        const auto* to_region   = &sese_->get_region(edge->to());
 
         if (from_region != to_region) {
             if (is_region_successor(*from_region, *to_region)) {
                 // This is an entry edge
                 const auto* parent_region = from_region;
                 const auto* child_region  = to_region;
-                auto node_id              = edge.to().id();
+                const auto* node_ptr      = edge->to();
 
                 while (child_region != parent_region) {
                     // make everyone an entry node
                     regions_data_[child_region->id].entries.push_back(
-                        {node_id, edge.id()});
+                        {node_ptr->id(), edge->id()});
 
-                    node_id      = regions_data_[child_region->id].node_id;
+                    node_ptr     = regions_data_[child_region->id].node_ptr;
                     child_region = &child_region->parent();
                 }
 
                 auto& ge = get_editor(*parent_region);
-                ge.edit_edge(edge, edge.from(), node_id);
+                ge.edit_edge(*edge, *edge->from(), *node_ptr);
             } else if (is_region_successor(*to_region, *from_region)) {
                 // This is an exit edge
                 const auto* parent_region = to_region;
                 const auto* child_region  = from_region;
-                auto node_id              = edge.from().id();
+                const auto* node_ptr      = edge->from();
 
                 while (child_region != parent_region) {
                     // make everyone an exit node
                     regions_data_[child_region->id].exits.push_back(
-                        {node_id, edge.id()});
+                        {node_ptr->id(), edge->id()});
 
-                    node_id      = regions_data_[child_region->id].node_id;
+                    node_ptr     = regions_data_[child_region->id].node_ptr;
                     child_region = &child_region->parent();
                 }
 
                 auto& ge = get_editor(*parent_region);
-                ge.edit_edge(edge, node_id, edge.to());
+                ge.edit_edge(*edge, *node_ptr, *edge->to());
             } else {
                 // The nodes connect through their parent
                 const auto& closest_ancestor =
                     get_closest_ancestor(*to_region, *from_region);
 
-                auto from_id = edge.from().id();
+                const auto* from_ptr = edge->from();
                 while (from_region != &closest_ancestor) {
                     // make everyone an exit node
                     regions_data_[from_region->id].exits.push_back(
-                        {from_id, edge.id()});
+                        {from_ptr->id(), edge->id()});
 
-                    from_id     = regions_data_[from_region->id].node_id;
+                    from_ptr    = regions_data_[from_region->id].node_ptr;
                     from_region = &from_region->parent();
                 }
 
-                auto to_id = edge.to().id();
+                const auto* to_ptr = edge->to();
                 while (to_region != &closest_ancestor) {
                     // make everyone an entry node
                     regions_data_[to_region->id].entries.push_back(
-                        {to_id, edge.id()});
+                        {to_ptr->id(), edge->id()});
 
-                    to_id     = regions_data_[to_region->id].node_id;
+                    to_ptr    = regions_data_[to_region->id].node_ptr;
                     to_region = &to_region->parent();
                 }
 
                 auto& ge = get_editor(closest_ancestor);
-                ge.edit_edge(edge, from_id, to_id);
+                ge.edit_edge(*edge, *from_ptr, *to_ptr);
             }
         }
     }
@@ -317,7 +317,7 @@ void Layout::init_regions() {
         if (region.entries.empty()) {
             auto& region = sese_->get_region(g_.root());
             assert(region.id == i);
-            ge.make_root(g_.root());
+            ge.make_root(*g_.root());
         } else {
             assert(region.entries.size() == 1);
             ge.make_root(region.entries.front().node);
@@ -345,8 +345,8 @@ auto Layout::get_waypoints(EdgeId edge) const -> const std::vector<Point>& {
     return waypoints_.get(edge);
 }
 
-auto Layout::get_region_node(const SESE::SESERegion& r) const -> Node {
-    return g_.get_node(regions_data_[r.id].node_id);
+auto Layout::get_region_node(const SESE::SESERegion& r) const -> const Node* {
+    return regions_data_[r.id].node_ptr;
 }
 
 auto Layout::get_editor(const SESE::SESERegion& r) -> SubGraphEditor& {
@@ -363,28 +363,28 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
     region.was_layout = true;
 
     for (const auto* child_region : r.children()) {
-        auto node = get_region_node(*child_region);
+        const auto& node = get_region_node(*child_region);
 
         compute_layout(*child_region);
-        widths_.set(node, regions_data_[child_region->id].width);
-        heights_.set(node, regions_data_[child_region->id].height);
+        widths_[node]  = regions_data_[child_region->id].width;
+        heights_[node] = regions_data_[child_region->id].height;
     }
 
     auto sugiyama =
         SugiyamaAnalysis(*region.subgraph, heights_, widths_, start_x_offset_,
                          end_x_offset_, region.entries, region.exits);
 
-    for (const auto& node : region.subgraph->nodes()) {
-        auto x = sugiyama.xs_.get(node);
-        auto y = sugiyama.ys_.get(node);
+    for (const auto* node : region.subgraph->nodes()) {
+        auto x = sugiyama.xs_[node];
+        auto y = sugiyama.ys_[node];
 
-        xs_.set(node, x);
+        xs_[node] = x;
 
-        ys_.set(node, y);
+        ys_[node] = y;
     }
 
-    for (const auto& edge : region.subgraph->edges()) {
-        waypoints_.set(edge, sugiyama.waypoints_.get(edge));
+    for (const auto* edge : region.subgraph->edges()) {
+        waypoints_[edge] = sugiyama.waypoints_[edge];
     }
 
     region.height = sugiyama.get_graph_height();
@@ -393,17 +393,17 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
     region.io_waypoints = sugiyama.get_io_waypoints();
 
     for (auto entry_pair : region.entries) {
-        end_x_offset_.set(entry_pair.edge,
-                          region.io_waypoints[entry_pair].front().x);
+        end_x_offset_[entry_pair.edge] =
+            region.io_waypoints[entry_pair].front().x;
     }
 
     for (auto exit_pair : region.exits) {
-        start_x_offset_.set(exit_pair.edge,
-                            region.io_waypoints[exit_pair].back().x);
+        start_x_offset_[exit_pair.edge] =
+            region.io_waypoints[exit_pair].back().x;
     }
 
-    heights_.set(region.node_id, region.height);
-    widths_.set(region.node_id, region.width);
+    heights_[region.node_ptr] = region.height;
+    widths_[region.node_ptr]  = region.width;
 
     if (sugiyama.has_top_loop_) {
         translate_region(r, {.x = 0, .y = -2 * Y_GUTTER});
@@ -413,16 +413,16 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
 void Layout::translate_region(const SESE::SESERegion& r, const Point& v) {
     auto& region = regions_data_[r.id];
 
-    for (const auto& node : region.subgraph->nodes()) {
-        auto node_x = Layout::get_x(node);
-        auto node_y = Layout::get_y(node);
+    for (const auto* node : region.subgraph->nodes()) {
+        auto node_x = Layout::get_x(*node);
+        auto node_y = Layout::get_y(*node);
 
-        xs_.set(node, node_x + v.x);
-        ys_.set(node, node_y + v.y);
+        xs_[node] = node_x + v.x;
+        ys_[node] = node_y + v.y;
     }
 
-    for (const auto& edge : region.subgraph->edges()) {
-        auto& waypoints = waypoints_.get(edge);
+    for (const auto* edge : region.subgraph->edges()) {
+        auto& waypoints = waypoints_[edge];
 
         for (auto& waypoint : waypoints) {
             waypoint += v;
@@ -439,9 +439,9 @@ void Layout::translate_region(const SESE::SESERegion& r, const Point& v) {
 // NOLINTNEXTLINE (misc-no-recursion)
 void Layout::translate_region(const SESE::SESERegion& r) {
     if (!r.is_root()) {
-        auto node = get_region_node(r);
+        const auto& node = get_region_node(r);
 
-        auto v = Point{.x = Layout::get_x(node), .y = Layout::get_y(node)};
+        auto v = Point{.x = Layout::get_x(*node), .y = Layout::get_y(*node)};
         translate_region(r, v);
     }
 
@@ -452,4 +452,4 @@ void Layout::translate_region(const SESE::SESERegion& r) {
 }
 
 Layout::RegionData::RegionData(Graph& g)
-    : subgraph{std::make_unique<SubGraph>(g)}, node_id{NodeId::InvalidID} {}
+    : subgraph{std::make_unique<SubGraph>(g)}, node_ptr{nullptr} {}

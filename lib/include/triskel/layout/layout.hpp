@@ -49,7 +49,7 @@ struct Layout : public ILayout {
         explicit RegionData(Graph& g);
 
         std::unique_ptr<SubGraph> subgraph;
-        NodeId node_id;
+        const Node* node_ptr;
 
         std::vector<IOPair> entries;
         std::vector<IOPair> exits;
@@ -78,7 +78,7 @@ struct Layout : public ILayout {
     /// @brief Edit a region's exit edge
     void edit_region_exit(const SESE::SESERegion& r);
 
-    auto get_region_node(const SESE::SESERegion& r) const -> Node;
+    auto get_region_node(const SESE::SESERegion& r) const -> const Node*;
 
     auto get_editor(const SESE::SESERegion& r) -> SubGraphEditor&;
 

@@ -5,6 +5,7 @@
 #include <fmt/printf.h>
 #include <gtest/gtest.h>
 
+namespace {
 void test_tree(RTree<char, size_t>& rtree) {
     ASSERT_EQ(rtree.root.children.size(), 1);
 
@@ -81,6 +82,8 @@ void test_tree(RTree<char, size_t>& rtree) {
     ASSERT_EQ(node_rubicundus->data.size(), 2);
     ASSERT_EQ(node_rubicundus->children.size(), 0);
 }
+
+}  // namespace
 
 TEST(RTree, Smoke) {
     auto rtree = RTree<char, size_t>();

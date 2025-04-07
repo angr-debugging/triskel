@@ -20,16 +20,16 @@ struct VertexOrdering {
 
     const NodeAttribute<size_t>& layers_;
 
-    std::vector<std::vector<Node>> node_layers_;
+    std::vector<std::vector<const Node*>> node_layers_;
 
     std::default_random_engine rng_;
 
-    void get_neighbor_orders(const Node& n,
+    void get_neighbor_orders(const Node* n,
                              std::vector<size_t>& orders_top,
                              std::vector<size_t>& orders_bottom) const;
 
-    [[nodiscard]] auto count_crossings(const Node& node1,
-                                       const Node& node2) const -> size_t;
+    [[nodiscard]] auto count_crossings(const Node* node1,
+                                       const Node* node2) const -> size_t;
 
     [[nodiscard]] auto count_crossings_with_layer(size_t l1, size_t l2)
         -> size_t;

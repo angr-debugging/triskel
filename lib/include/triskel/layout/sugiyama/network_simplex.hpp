@@ -22,18 +22,20 @@ struct SpanningTree {
 
     void init_rank();
 
-    void tight_tree_recurs(NodeId n);
+    void tight_tree_recurs(const Node* n);
 
     /// @brief Constructs a tight spanning tree and returns the number of nodes
     /// in that tree
     auto tight_tree() -> size_t;
 
-    void build_postorder_tree_rec(const Node& node, NodeId parent, size_t& lim);
+    void build_postorder_tree_rec(const Node* node,
+                                  const Node* parent,
+                                  size_t& lim);
 
     void build_postorder_tree();
 
-    [[nodiscard]] auto lim(NodeId n) const -> size_t;
-    [[nodiscard]] auto low(NodeId n) const -> size_t;
+    [[nodiscard]] auto lim(const Node* n) const -> size_t;
+    [[nodiscard]] auto low(const Node* n) const -> size_t;
 
     [[nodiscard]] auto slack(EdgeId e) const -> size_t;
     [[nodiscard]] auto is_tight(EdgeId e) const -> bool;
@@ -41,20 +43,21 @@ struct SpanningTree {
     /// @brief returns 1 for nodes in the head region and -1 for nodes in the
     /// tail region
     /// Testing a node w for an edge u -> v
-    // [[nodiscard]] auto get_component(const Edge& e, NodeId w) const ->
+    // [[nodiscard]] auto get_component(const Edge* e, const Node* w) const ->
     // int32_t;
-    [[nodiscard]] auto get_component(const Edge& e, NodeId w) const -> int32_t;
+    [[nodiscard]] auto get_component(const Edge* e, const Node* w) const
+        -> int32_t;
 
-    void init_cut_values(const Node& node, EdgeId tree_edge);
+    void init_cut_values(const Node* node, EdgeId tree_edge);
     void init_cut_values();
 
-    auto enter_edge(const Edge& e) -> Edge;
+    auto enter_edge(const Edge* e) -> const Edge*;
 
-    void update_ranks_rec(const Node& node, NodeId parent, size_t delta);
+    void update_ranks_rec(const Node* node, const Node* parent, size_t delta);
 
-    void exchange(const Edge& e, const Edge& f);
+    void exchange(const Edge* e, const Edge* f);
 
-    auto get_incident_edge() -> Edge;
+    auto get_incident_edge() -> const Edge*;
     void feasible_tree();
 
     auto normalize_ranks() -> size_t;
@@ -63,7 +66,7 @@ struct SpanningTree {
 
     void dump();
 
-    std::deque<NodeId> nodes_;
+    std::deque<const Node*> nodes_;
     std::deque<EdgeId> edges_;
 
     NodeAttribute<bool> in_tree_;

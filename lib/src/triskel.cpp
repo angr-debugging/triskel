@@ -97,20 +97,20 @@ struct CFGLayoutImpl : CFGLayout {
         render.begin(width, height);
 
         // Draws the nodes
-        for (const auto& node : graph_->nodes()) {
-            auto tl     = layout_.get_xy(node);
-            auto width  = widths_.get(node);
-            auto height = heights_.get(node);
+        for (const auto* node : graph_->nodes()) {
+            auto tl     = layout_.get_xy(*node);
+            auto width  = widths_.get(*node);
+            auto height = heights_.get(*node);
 
             render.draw_rectangle_border(tl, width, height,
                                          render.STYLE_BASICBLOCK_BORDER);
 
-            render.draw_text(tl, labels_.get(node), render.STYLE_TEXT);
+            render.draw_text(tl, labels_.get(*node), render.STYLE_TEXT);
         }
 
         // Draws the edges
-        for (const auto& edge : graph_->edges()) {
-            const auto& waypoints = layout_.get_waypoints(edge);
+        for (const auto* edge : graph_->edges()) {
+            const auto& waypoints = layout_.get_waypoints(*edge);
 
             if (waypoints.empty()) {
                 continue;
@@ -121,7 +121,7 @@ struct CFGLayoutImpl : CFGLayout {
             // Gets the style for this edge
             auto style = render.STYLE_EDGE;
 
-            auto t = edge_types_.get(edge);
+            auto t = edge_types_.get(*edge);
             if (t == LayoutBuilder::EdgeType::True) {
                 style = render.STYLE_EDGE_T;
             } else if (t == LayoutBuilder::EdgeType::False) {
@@ -176,11 +176,11 @@ struct LayoutBuilderImpl : LayoutBuilder {
     }
 
     auto make_node() -> size_t override {
-        return static_cast<size_t>(graph_->editor().make_node().id());
+        return static_cast<size_t>(graph_->editor().make_node()->id());
     }
 
     auto make_node(float height, float width) -> size_t override {
-        auto node = graph_->editor().make_node().id();
+        auto node = graph_->editor().make_node()->id();
 
         heights_.set(node, height);
         widths_.set(node, width);
@@ -189,7 +189,7 @@ struct LayoutBuilderImpl : LayoutBuilder {
     }
 
     auto make_node(const std::string& label) -> size_t override {
-        auto node = graph_->editor().make_node().id();
+        auto node = graph_->editor().make_node()->id();
 
         auto bbox = get_string_size(label);
 
@@ -201,9 +201,9 @@ struct LayoutBuilderImpl : LayoutBuilder {
         return static_cast<size_t>(node);
     }
 
-    auto make_node(const Renderer& render,
-                   const std::string& label) -> size_t override {
-        auto node = graph_->editor().make_node().id();
+    auto make_node(const Renderer& render, const std::string& label)
+        -> size_t override {
+        auto node = graph_->editor().make_node()->id();
         auto bbox = render.measure_text(label, render.STYLE_TEXT);
 
         widths_.set(node, bbox.x);
@@ -215,11 +215,11 @@ struct LayoutBuilderImpl : LayoutBuilder {
     }
 
     void measure_nodes(const Renderer& renderer) override {
-        for (const auto& node : graph_->nodes()) {
-            const auto& label = labels_.get(node);
+        for (const auto* node : graph_->nodes()) {
+            const auto& label = labels_.get(*node);
             const auto bbox = renderer.measure_text(label, renderer.STYLE_TEXT);
-            widths_.set(node, bbox.x);
-            heights_.set(node, bbox.y);
+            widths_[node]   = bbox.x;
+            heights_[node]  = bbox.y;
         }
     }
 
@@ -227,17 +227,17 @@ struct LayoutBuilderImpl : LayoutBuilder {
         auto from_id = get_node_id(*graph_, from);
         auto to_id   = get_node_id(*graph_, to);
 
-        auto edge = graph_->editor().make_edge(from_id, to_id);
-        return static_cast<size_t>(edge.id());
+        const auto& edge = graph_->editor().make_edge(from_id, to_id);
+        return static_cast<size_t>(edge->id());
     }
 
     auto make_edge(size_t from, size_t to, EdgeType type) -> size_t override {
         auto from_id = get_node_id(*graph_, from);
         auto to_id   = get_node_id(*graph_, to);
 
-        auto edge = graph_->editor().make_edge(from_id, to_id);
-        edge_types_.set(edge, type);
-        return static_cast<size_t>(edge.id());
+        const auto& edge  = graph_->editor().make_edge(from_id, to_id);
+        edge_types_[edge] = type;
+        return static_cast<size_t>(edge->id());
     }
 
     auto build() -> std::unique_ptr<CFGLayout> override {
@@ -295,12 +295,13 @@ auto triskel::make_layout_builder() -> std::unique_ptr<LayoutBuilder> {
     return std::make_unique<LayoutBuilderImpl>();
 }
 
-auto triskel::make_layout(std::unique_ptr<Graph> g,
-                          const NodeAttribute<float>& width,
-                          const NodeAttribute<float>& height,
-                          const NodeAttribute<std::string>& label,
-                          const EdgeAttribute<LayoutBuilder::EdgeType>&
-                              edge_types) -> std::unique_ptr<CFGLayout> {
+auto triskel::make_layout(
+    std::unique_ptr<Graph> g,
+    const NodeAttribute<float>& width,
+    const NodeAttribute<float>& height,
+    const NodeAttribute<std::string>& label,
+    const EdgeAttribute<LayoutBuilder::EdgeType>& edge_types)
+    -> std::unique_ptr<CFGLayout> {
     return std::make_unique<CFGLayoutImpl>(std::move(g), label, width, height,
                                            edge_types);
 }
