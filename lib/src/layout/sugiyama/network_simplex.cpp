@@ -29,14 +29,12 @@ SpanningTree::SpanningTree(const IGraph& g)
       postorder_tree_{g, {.low = 0, .lim = 0}},
       cut_{g, 0} {}
 
-auto SpanningTree::slack(EdgeId e) const -> size_t {
-    const auto* edge = g.get_edge(e);
-
+auto SpanningTree::slack(const Edge* edge) const -> size_t {
     return ranks_[edge->to()] - ranks_[edge->from()] - 1;
 }
 
-auto SpanningTree::is_tight(EdgeId e) const -> bool {
-    return slack(e) == 0;
+auto SpanningTree::is_tight(const Edge* edge) const -> bool {
+    return slack(edge) == 0;
 }
 
 auto SpanningTree::leave_edge() -> EdgeId {
@@ -97,9 +95,7 @@ void SpanningTree::init_rank() {
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void SpanningTree::tight_tree_recurs(const Node* n) {
-    const auto* node = g.get_node(*n);
-
+void SpanningTree::tight_tree_recurs(const Node* node) {
     for (const auto* edge : node->edges()) {
         auto* neighbor = edge->other(*node);
 
@@ -108,7 +104,7 @@ void SpanningTree::tight_tree_recurs(const Node* n) {
         }
 
         // Only keep tight edges
-        if (!is_tight(*edge)) {
+        if (!is_tight(edge)) {
             continue;
         }
 
@@ -228,7 +224,7 @@ auto SpanningTree::enter_edge(const Edge* e) -> const Edge* {
     for (const auto* edge : g.edges()) {
         if (get_component(e, edge->to()) == from_component &&
             get_component(e, edge->from()) == to_component && edge != e) {
-            const auto s = slack(*edge);
+            const auto s = slack(edge);
             if (s < min_slack) {
                 min_slack = s;
                 f         = *edge;
@@ -273,7 +269,7 @@ void SpanningTree::exchange(const Edge* e, const Edge* f) {
         std::swap(tail, head);
     }
 
-    const size_t delta = slack(*f);
+    const size_t delta = slack(f);
     update_ranks_rec(tail, nullptr, delta);
 
     e_in_tree_[f] = true;
@@ -284,7 +280,7 @@ void SpanningTree::exchange(const Edge* e, const Edge* f) {
 }
 
 auto SpanningTree::get_incident_edge() -> const Edge* {
-    auto e           = EdgeId::InvalidID;
+    const Edge* e    = nullptr;
     size_t min_slack = std::numeric_limits<size_t>::max();
 
     for (const auto* node : g.nodes()) {
@@ -300,17 +296,17 @@ auto SpanningTree::get_incident_edge() -> const Edge* {
                 continue;
             }
 
-            auto edge_slack = slack(*edge);
+            auto edge_slack = slack(edge);
             assert(edge_slack != 1);
 
             if (edge_slack < min_slack) {
                 min_slack = edge_slack;
-                e         = *edge;
+                e         = edge;
             }
         }
     }
-    assert(e != EdgeId::InvalidID);
-    return g.get_edge(e);
+    assert(e != nullptr);
+    return e;
 }
 
 void SpanningTree::feasible_tree() {
@@ -322,14 +318,14 @@ void SpanningTree::feasible_tree() {
     // Adds the root to the tree
     while (tight_tree() < g.node_count()) {
         const auto* edge = get_incident_edge();
-        auto delta       = slack(*edge);
+        auto delta       = slack(edge);
 
         if (in_tree_[edge->to()]) {
             delta = -delta;
         }
 
         for (const auto* node : nodes_) {
-            ranks_[*node] += delta;
+            ranks_[node] += delta;
         }
     }
 

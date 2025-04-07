@@ -2,10 +2,8 @@
 
 #include <cassert>
 #include <cstddef>
-#include <map>
 #include <memory>
 #include <stack>
-#include <vector>
 
 #include <fmt/core.h>
 #include <fmt/printf.h>

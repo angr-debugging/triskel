@@ -37,8 +37,8 @@ struct SpanningTree {
     [[nodiscard]] auto lim(const Node* n) const -> size_t;
     [[nodiscard]] auto low(const Node* n) const -> size_t;
 
-    [[nodiscard]] auto slack(EdgeId e) const -> size_t;
-    [[nodiscard]] auto is_tight(EdgeId e) const -> bool;
+    [[nodiscard]] auto slack(const Edge* edge) const -> size_t;
+    [[nodiscard]] auto is_tight(const Edge* edge) const -> bool;
 
     /// @brief returns 1 for nodes in the head region and -1 for nodes in the
     /// tail region

@@ -175,33 +175,51 @@ void reaches_exit_backwards(NodeAttribute<bool>& visited,
 void SESE::preprocess_graph() {
     // create_phantom_nodes(g_);
 
-    auto& ge = g_.editor();
-
-    auto visited         = NodeAttribute<bool>{g_, false};
-    size_t visited_count = 0;
-
-    reaches_exit_backwards(visited, visited_count, g_.root());
-
-    const auto node_count = g_.node_count();
-    if (visited_count != node_count) {
-        auto* exit = ge.make_node();
-
-        for (const auto* node : g_.nodes()) {
-            if ((node->children_count() == 0) && (node != exit)) {
-                ge.make_edge(*node, *exit);
-                reaches_exit_backwards(visited, visited_count, node);
-            }
+    auto& ge   = g_.editor();
+    auto* exit = ge.make_node();
+    for (const auto* node : g_.nodes()) {
+        if (node == exit) {
+            continue;
         }
 
-        while (visited_count != node_count + 1) {
-            const auto& sink = get_new_sink(g_, visited);
-            ge.make_edge(*sink, *exit);
-            reaches_exit_backwards(visited, visited_count, sink);
+        if (node->child_edges().empty()) {
+            ge.make_edge(*node, *exit);
         }
+    }
 
-        assert(exit->parent_count() != 0);
+    // The graph is already strongly connected
+    // TODO: FIX THIS
+    if (exit->parent_edges().empty()) {
+        ge.remove_node(*exit);
+    } else {
         ge.make_edge(*exit, *g_.root());
     }
+
+    // auto visited         = NodeAttribute<bool>{g_, false};
+    // size_t visited_count = 0;
+
+    // reaches_exit_backwards(visited, visited_count, g_.root());
+
+    // const auto node_count = g_.node_count();
+    // if (visited_count != node_count) {
+    //     auto* exit = ge.make_node();
+
+    //     for (const auto* node : g_.nodes()) {
+    //         if ((node->children_count() == 0) && (node != exit)) {
+    //             ge.make_edge(*node, *exit);
+    //             reaches_exit_backwards(visited, visited_count, node);
+    //         }
+    //     }
+
+    //     while (visited_count != node_count + 1) {
+    //         const auto& sink = get_new_sink(g_, visited);
+    //         ge.make_edge(*sink, *exit);
+    //         reaches_exit_backwards(visited, visited_count, sink);
+    //     }
+
+    //     assert(exit->parent_count() != 0);
+    //     ge.make_edge(*exit, *g_.root());
+    // }
 }
 
 auto SESE::is_backedge_stating_from(const Edge* edge,
