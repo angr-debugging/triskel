@@ -381,7 +381,6 @@ auto run_on_module(llvm::Module& module, llvm::ModuleSlotTracker& MST)
     bar.start();
     for (auto& function : module) {
         bar.draw();
-        fmt::print("{}\n", function.getName().str());
         auto stat = run_on_function(function, errors, skipped, MST);
         if (stat.has_value()) {
             intersections += stat->nb_intersections;
