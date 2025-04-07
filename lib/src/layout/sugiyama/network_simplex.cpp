@@ -329,7 +329,7 @@ void SpanningTree::feasible_tree() {
         }
     }
 
-    // init_cut_values();
+    init_cut_values();
 }
 
 auto SpanningTree::normalize_ranks() -> size_t {
@@ -387,12 +387,12 @@ auto triskel::network_simplex(const IGraph& graph)
     auto spanning_tree = SpanningTree(graph);
     spanning_tree.feasible_tree();
 
-    // EdgeId id;
-    // while ((id = spanning_tree.leave_edge()) != EdgeId::InvalidID) {
-    //     auto e = graph.get_edge(id);
-    //     auto f = spanning_tree.enter_edge(e);
-    //     spanning_tree.exchange(e, f);
-    // }
+    EdgeId id;
+    while ((id = spanning_tree.leave_edge()) != EdgeId::InvalidID) {
+        const auto* e = graph.get_edge(id);
+        const auto* f = spanning_tree.enter_edge(e);
+        spanning_tree.exchange(e, f);
+    }
 
     auto rank_count = spanning_tree.normalize_ranks();
 
