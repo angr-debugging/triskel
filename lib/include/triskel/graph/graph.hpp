@@ -16,9 +16,6 @@ struct GraphEditor : public IGraphEditor {
     explicit GraphEditor(Graph& g);
     explicit GraphEditor(const GraphEditor&) = delete;
 
-    /// @brief Debug tests
-    ~GraphEditor() override;
-
     auto operator=(const GraphEditor&) -> GraphEditor& = delete;
 
     auto make_node() -> Node* override;

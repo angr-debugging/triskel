@@ -114,6 +114,7 @@ void Layout::create_region_subgraphs() {
     for (const auto* node : g_.nodes()) {
         const auto& r = sese_->get_region(node);
         auto& editor  = get_editor(r);
+        editor.push();
         editor.select_node(*node);
     }
 }

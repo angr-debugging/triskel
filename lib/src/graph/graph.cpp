@@ -22,10 +22,6 @@ using namespace triskel;
 // =============================================================================
 GraphEditor::GraphEditor(Graph& g) : g_{g} {}
 
-GraphEditor::~GraphEditor() {
-    assert(frames.empty());
-}
-
 auto GraphEditor::make_node() -> Node* {
     auto id = NodeId{next_node_id_};
     ++next_node_id_;

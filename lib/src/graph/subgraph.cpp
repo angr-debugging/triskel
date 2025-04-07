@@ -182,7 +182,6 @@ void SubGraphEditor::push() {
     frames.emplace();
 }
 
-// TODO: OPTIMIZE
 void SubGraphEditor::pop() {
     auto& f = frames.top();
 
