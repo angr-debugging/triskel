@@ -22,23 +22,19 @@ struct VertexOrdering {
 
     std::vector<std::vector<const Node*>> node_layers_;
 
-    std::default_random_engine rng_;
+    NodeAttribute<std::vector<size_t>> child_orders_;
+    NodeAttribute<std::vector<size_t>> parent_orders_;
 
-    void get_neighbor_orders(const Node* n,
-                             std::vector<size_t>& orders_top,
-                             std::vector<size_t>& orders_bottom) const;
+    std::default_random_engine rng_;
 
     [[nodiscard]] auto count_crossings(const Node* node1,
                                        const Node* node2) const -> size_t;
 
-    [[nodiscard]] auto count_crossings_with_layer(size_t l1, size_t l2)
-        -> size_t;
+    [[nodiscard]] auto count_crossings_with_layer(
+        size_t l1,
+        NodeAttribute<std::vector<size_t>>& neighbor_orders) -> size_t;
 
     // Save the vectors to avoid reallocating memory every time
-    mutable std::vector<size_t> orders_top1;
-    mutable std::vector<size_t> orders_top2;
-    mutable std::vector<size_t> orders_bottom1;
-    mutable std::vector<size_t> orders_bottom2;
     [[nodiscard]] auto count_crossings() -> size_t;
 
     /// @brief transform the order to the index in the layer
@@ -46,5 +42,7 @@ struct VertexOrdering {
 
     void median(size_t iter);
     void transpose();
+
+    void swap(const Node* node, size_t i, size_t old_order, size_t new_order);
 };
 }  // namespace triskel

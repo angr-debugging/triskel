@@ -15,8 +15,8 @@
 using namespace triskel;
 
 namespace {
-[[nodiscard]] auto merge_and_count(std::vector<size_t>& lo,
-                                   std::vector<size_t>& hi) -> size_t {
+[[nodiscard]] auto merge_and_count(const std::vector<size_t>& lo,
+                                   const std::vector<size_t>& hi) -> size_t {
     size_t inversions = 0;
 
     size_t i = 0;
@@ -95,7 +95,11 @@ namespace {
 VertexOrdering::VertexOrdering(const IGraph& g,
                                const NodeAttribute<size_t>& layers,
                                size_t layer_count_)
-    : orders_(g, -1), g_{g}, layers_(layers) {
+    : orders_(g, -1),
+      g_{g},
+      layers_(layers),
+      child_orders_(g, {}),
+      parent_orders_(g, {}) {
     node_layers_.resize(layer_count_);
 
     for (const auto* node : g_.nodes()) {
@@ -130,38 +134,38 @@ VertexOrdering::VertexOrdering(const IGraph& g,
     orders_ = best;
 }
 
-void VertexOrdering::get_neighbor_orders(
-    const Node* n,
-    std::vector<size_t>& orders_top,
-    std::vector<size_t>& orders_bottom) const {
-    for (const auto* child_edge : n->child_edges()) {
-        orders_bottom.push_back(orders_[child_edge->to]);
+void VertexOrdering::swap(const Node* node,
+                          size_t i,
+                          size_t old_order,
+                          size_t new_order) {
+    for (const auto* child_e : node->child_edges()) {
+        auto& arr = parent_orders_[child_e->to];
+        auto it   = std::ranges::lower_bound(arr, old_order);
+        if ((it == arr.begin() || *(it - 1) != i) &&
+            ((it + 1) == arr.end() || *(it + 1) != (i + 1))) {
+            *it = new_order;
+        }
     }
 
-    for (const auto* parent_edge : n->parent_edges()) {
-        orders_top.push_back(orders_[parent_edge->from]);
+    for (const auto* parent_e : node->parent_edges()) {
+        auto& arr = child_orders_[parent_e->from];
+        auto it   = std::ranges::lower_bound(arr, old_order);
+        if ((it == arr.begin() || *(it - 1) != i) &&
+            ((it + 1) == arr.end() || *(it + 1) != (i + 1))) {
+            *it = new_order;
+        }
     }
-
-    std::ranges::sort(orders_top);
-    std::ranges::sort(orders_bottom);
 }
 
 auto VertexOrdering::count_crossings(const Node* node1, const Node* node2) const
     -> size_t {
-    orders_top1.clear();
-    orders_top2.clear();
-    orders_bottom1.clear();
-    orders_bottom2.clear();
-
-    get_neighbor_orders(node1, orders_top1, orders_bottom1);
-    get_neighbor_orders(node2, orders_top2, orders_bottom2);
-
-    return merge_and_count(orders_top1, orders_top2) +
-           merge_and_count(orders_bottom1, orders_bottom2);
+    return merge_and_count(parent_orders_[node1], parent_orders_[node2]) +
+           merge_and_count(child_orders_[node1], child_orders_[node2]);
 }
 
-auto VertexOrdering::count_crossings_with_layer(size_t l1, size_t l2)
-    -> size_t {
+auto VertexOrdering::count_crossings_with_layer(
+    size_t l1,
+    NodeAttribute<std::vector<size_t>>& neighbor_orders) -> size_t {
     auto& layer = node_layers_[l1];
 
     if (layer.size() <= 1) {
@@ -172,24 +176,11 @@ auto VertexOrdering::count_crossings_with_layer(size_t l1, size_t l2)
         return orders_[a] < orders_[b];
     }));
 
-    // TODO: have a preallocated static vector
     auto orders = std::vector<size_t>{};
-    orders.reserve(2 * node_layers_[l2].size());  // heuristically
-
-    auto neighbors = std::vector<size_t>{};
-    neighbors.reserve(node_layers_[l2].size());  // heuristically
+    orders.reserve(layer.size());  // heuristically
 
     for (const auto* node : layer) {
-        neighbors.clear();
-
-        for (const auto& edge : node->edges()) {
-            const auto& child = edge->other(*node);
-            if (layers_[child] == l2) {
-                neighbors.push_back(orders_[child]);
-            }
-        }
-
-        std::ranges::sort(neighbors);
+        const auto& neighbors = neighbor_orders[node];
         orders.insert(orders.end(), neighbors.begin(), neighbors.end());
     }
 
@@ -200,7 +191,7 @@ auto VertexOrdering::count_crossings() -> size_t {
     size_t crossings = 0;
 
     for (size_t l = 0; l < node_layers_.size() - 1; ++l) {
-        crossings += count_crossings_with_layer(l, l + 1);
+        crossings += count_crossings_with_layer(l, child_orders_);
     }
 
     return crossings;
@@ -222,49 +213,39 @@ void VertexOrdering::normalize_order() {
             order++;
         }
     }
+
+    // TODO: this is over-complex
+    for (const auto* node : g_.nodes()) {
+        child_orders_[node] =
+            node->child_edges() |
+            std::ranges::views::transform(
+                [&](const auto* edge) { return orders_[edge->to]; }) |
+            std::ranges::to<std::vector<size_t>>();
+        std::ranges::sort(child_orders_[node]);
+
+        parent_orders_[node] =
+            node->parent_edges() |
+            std::ranges::views::transform(
+                [&](const auto* edge) { return orders_[edge->from]; }) |
+            std::ranges::to<std::vector<size_t>>();
+        std::ranges::sort(parent_orders_[node]);
+    }
 }
 
-// TODO: this sucks
 void VertexOrdering::median(size_t iter) {
-    if (iter % 2 == 0) {
-        for (const auto& nodes : node_layers_) {
-            for (const auto* node : nodes) {
-                auto median_order = orders_[node];
+    auto neighbor_orders = iter % 2 == 0 ? child_orders_ : parent_orders_;
 
-                auto children =
-                    node->child_edges() |
-                    std::ranges::views::transform(
-                        [&](const auto& edge) { return orders_[edge->to]; }) |
-                    std::ranges::to<std::vector<size_t>>();
+    for (const auto& nodes : node_layers_) {
+        for (const auto* node : nodes) {
+            auto median_order = orders_[node];
 
-                std::ranges::sort(children);
+            auto& neighbors = neighbor_orders[node];
 
-                if (!children.empty()) {
-                    median_order = children[children.size() / 2];
-                }
-
-                orders_[node] = median_order;
+            if (!neighbors.empty()) {
+                median_order = neighbors[neighbors.size() / 2];
             }
-        }
-    } else {
-        for (const auto& nodes : node_layers_) {
-            for (const auto* node : nodes) {
-                auto median_order = orders_[node];
 
-                auto parents =
-                    node->parent_edges() |
-                    std::ranges::views::transform(
-                        [&](const auto& edge) { return orders_[edge->from]; }) |
-                    std::ranges::to<std::vector<size_t>>();
-
-                std::ranges::sort(parents);
-
-                if (!parents.empty()) {
-                    median_order = parents[parents.size() / 2];
-                }
-
-                orders_[node] = median_order;
-            }
+            orders_[node] = median_order;
         }
     }
 }
@@ -297,6 +278,10 @@ void VertexOrdering::transpose() {
 
                     // Swap the nodes to ensure the array remains sorted
                     std::swap(nodes[i], nodes[i + 1]);
+
+                    // Swap in the parent and child order sets
+                    swap(v, i, i, i + 1);
+                    swap(w, i, i + 1, i);
                 }
             }
         }
