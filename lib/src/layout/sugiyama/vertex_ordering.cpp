@@ -135,11 +135,11 @@ void VertexOrdering::get_neighbor_orders(
     std::vector<size_t>& orders_top,
     std::vector<size_t>& orders_bottom) const {
     for (const auto* child_edge : n->child_edges()) {
-        orders_bottom.push_back(orders_[child_edge->to()]);
+        orders_bottom.push_back(orders_[child_edge->to]);
     }
 
     for (const auto* parent_edge : n->parent_edges()) {
-        orders_top.push_back(orders_[parent_edge->from()]);
+        orders_top.push_back(orders_[parent_edge->from]);
     }
 
     std::ranges::sort(orders_top);
@@ -234,7 +234,7 @@ void VertexOrdering::median(size_t iter) {
                 auto children =
                     node->child_edges() |
                     std::ranges::views::transform(
-                        [&](const auto& edge) { return orders_[edge->to()]; }) |
+                        [&](const auto& edge) { return orders_[edge->to]; }) |
                     std::ranges::to<std::vector<size_t>>();
 
                 std::ranges::sort(children);
@@ -253,9 +253,8 @@ void VertexOrdering::median(size_t iter) {
 
                 auto parents =
                     node->parent_edges() |
-                    std::ranges::views::transform([&](const auto& edge) {
-                        return orders_[edge->from()];
-                    }) |
+                    std::ranges::views::transform(
+                        [&](const auto& edge) { return orders_[edge->from]; }) |
                     std::ranges::to<std::vector<size_t>>();
 
                 std::ranges::sort(parents);

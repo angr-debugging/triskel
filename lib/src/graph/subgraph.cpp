@@ -59,8 +59,8 @@ void SubGraphEditor::select_edge(const Edge* g_edge, bool use_frame) {
 
     auto& sg_edge = sg_.data_.edges[*g_edge];
 
-    sg_edge->to_   = sg_.data_.nodes[*g_edge->to()].get();
-    sg_edge->from_ = sg_.data_.nodes[*g_edge->from()].get();
+    sg_edge->to   = sg_.data_.nodes[*g_edge->to].get();
+    sg_edge->from = sg_.data_.nodes[*g_edge->from].get();
 
     sg_edge->link();
 
@@ -140,7 +140,7 @@ void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
     if (sg_.contains(edge)) {
         sg_edge = sg_.data_.edges[edge].get();
         frame().changes.push(
-            Frame::ModifyEdge(*sg_edge, sg_edge->from_, sg_edge->to_));
+            Frame::ModifyEdge(*sg_edge, sg_edge->from, sg_edge->to));
         sg_edge->unlink();
     } else {
         sg_.data_.edges[edge] = std::make_unique<Edge>(edge);
@@ -150,8 +150,8 @@ void SubGraphEditor::edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) {
 
     editor_.edit_edge(edge, new_from, new_to);
 
-    sg_edge->to_   = sg_.data_.nodes[new_to].get();
-    sg_edge->from_ = sg_.data_.nodes[new_from].get();
+    sg_edge->to   = sg_.data_.nodes[new_to].get();
+    sg_edge->from = sg_.data_.nodes[new_from].get();
 
     sg_edge->link();
 }

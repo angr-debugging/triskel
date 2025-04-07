@@ -106,7 +106,7 @@ TEST(Graph, Children) {
     auto test = [](const Node* n, std::initializer_list<NodeId> l) {
         auto actual = std::set<NodeId>{};
         for (const auto* edge : n->child_edges()) {
-            actual.insert(*edge->to());
+            actual.insert(*edge->to);
         }
         auto str      = fmt::format("{}", actual);
         auto expected = fmt::format("{}", std::set<NodeId>(l));
@@ -129,7 +129,7 @@ TEST(Graph, Parents) {
     auto test = [](const Node* n, std::initializer_list<NodeId> l) {
         auto actual = std::set<NodeId>{};
         for (const auto* edge : n->parent_edges()) {
-            actual.insert(*edge->from());
+            actual.insert(*edge->from);
         }
         auto str      = fmt::format("{}", actual);
         auto expected = fmt::format("{}", std::set<NodeId>(l));

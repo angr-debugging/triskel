@@ -185,7 +185,7 @@ void split_node(IGraph& graph, const Node* node, DFSNums& keys) {
     auto rtree   = RTree{};
 
     for (const auto& parent_edge : node->parent_edges()) {
-        const auto& parent = parent_edge->from();
+        const auto& parent = parent_edge->from;
         rtree.insert(parent, keys[parent]);
     }
 
@@ -275,7 +275,7 @@ void triskel::create_phantom_nodes(IGraph& g) {
 
             const auto parent_edges = span_to_vec(node->parent_edges());
             for (const auto* edge : parent_edges) {
-                editor.edit_edge(*edge, *edge->from(), *parent);
+                editor.edit_edge(*edge, *edge->from, *parent);
             }
 
             editor.make_edge(*parent, *node);

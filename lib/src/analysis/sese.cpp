@@ -163,7 +163,7 @@ void reaches_exit_backwards(NodeAttribute<bool>& visited,
     visited_count += 1;
 
     for (const auto* e : node->parent_edges()) {
-        const auto& child = e->from();
+        const auto& child = e->from;
 
         if (!visited[child]) {
             reaches_exit_backwards(visited, visited_count, child);
@@ -336,7 +336,7 @@ void SESE::determine_region_boundaries(
 
     for (const auto* edge : node->child_edges()) {
         auto visited_class = visited_class_;
-        const auto& child  = edge->to();
+        const auto& child  = edge->to;
 
         auto edge_class = classes_.get(*edge);
 
@@ -382,11 +382,11 @@ void SESE::construct_program_structure_tree(const Node* node,
 
     for (const auto* edge : node->child_edges()) {
         auto* curr  = &current_region;
-        auto* child = edge->to();
+        auto* child = edge->to;
 
         if (exit_edge_.get(*edge)) {
             region->exit_edge = edge;
-            region->exit_node = edge->from();
+            region->exit_node = edge->from;
             curr              = &region.parent();
         }
 
@@ -395,7 +395,7 @@ void SESE::construct_program_structure_tree(const Node* node,
 
             curr->add_child(&region);
             region->entry_edge = edge;
-            region->entry_node = edge->to();
+            region->entry_node = edge->to;
             curr               = &region;
         }
 

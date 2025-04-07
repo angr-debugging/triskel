@@ -80,7 +80,7 @@ struct BinArch : public Arch {
         }
 
         for (const auto* edge : cfg->graph->edges()) {
-            const auto& from = edge->from();
+            const auto& from = edge->from;
 
             if (from->children_count() == 2) {
                 auto last_addr = cfg->instructions[from].back().addr;

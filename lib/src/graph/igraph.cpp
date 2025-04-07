@@ -18,18 +18,18 @@ using namespace triskel;
 /// @brief Adds an edge to each of its nodes
 void Edge::link() {
     // Child edges go in the back
-    from_->edges_.push_back(this);
+    from->edges_.push_back(this);
 
     // Parent edges go in the front
-    to_->edges_.insert(to_->edges_.begin(), this);
-    to_->separator_++;
+    to->edges_.insert(to->edges_.begin(), this);
+    to->separator_++;
 }
 
 /// @brief Removes an edge from each of its nodes
 void Edge::unlink() {
-    std::erase(from_->edges_, this);
-    std::erase(to_->edges_, this);
-    to_->separator_--;
+    std::erase(from->edges_, this);
+    std::erase(to->edges_, this);
+    to->separator_--;
 }
 
 // =============================================================================
@@ -71,20 +71,12 @@ auto Edge::id() const -> EdgeId {
     return id_;
 }
 
-auto Edge::from() const -> Node* {
-    return from_;
-}
-
-auto Edge::to() const -> Node* {
-    return to_;
-}
-
 auto Edge::other(NodeId n) const -> Node* {
-    if (n == *to()) {
-        return from();
+    if (n == *to) {
+        return from;
     }
 
-    return to();
+    return to;
 }
 
 // =============================================================================
@@ -95,7 +87,7 @@ auto triskel::format_as(const Node& n) -> std::string {
 }
 
 auto triskel::format_as(const Edge& e) -> std::string {
-    return fmt::format("{} -> {}", *e.from_, *e.to_);
+    return fmt::format("{} -> {}", *e.from, *e.to);
 }
 
 auto triskel::format_as(IGraph& g) -> std::string {

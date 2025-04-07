@@ -23,7 +23,7 @@ auto select_node(const IGraph& g,
 
         auto valid = true;
         for (const auto* child_edge : node->child_edges()) {
-            const auto& child = child_edge->to();
+            const auto& child = child_edge->to;
             if (!std::ranges::contains(Z, child)) {
                 valid = false;
                 break;

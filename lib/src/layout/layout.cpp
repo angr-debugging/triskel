@@ -148,12 +148,12 @@ void Layout::edit_region_entry(const SESE::SESERegion& r) {
     const auto& entry = *entry_id;
 
     const auto& parent_region = r.parent();
-    const auto& from_region   = sese_->get_region(entry.from());
+    const auto& from_region   = sese_->get_region(entry.from);
 
     const auto* to_node = get_region_node(r);
 
     const auto* from_node = from_region == parent_region
-                                ? entry.from()
+                                ? entry.from
                                 : get_region_node(from_region);
 
     auto& ge = get_editor(parent_region);
@@ -170,12 +170,12 @@ void Layout::edit_region_exit(const SESE::SESERegion& r) {
     const auto& exit = exit_id;
 
     const auto& parent_region = r.parent();
-    const auto& to_region     = sese_->get_region(exit->to());
+    const auto& to_region     = sese_->get_region(exit->to);
 
     const auto& from_node = get_region_node(r);
 
     const auto& to_node =
-        to_region == parent_region ? exit->to() : get_region_node(to_region);
+        to_region == parent_region ? exit->to : get_region_node(to_region);
 
     auto& ge = get_editor(parent_region);
     ge.select_node(*to_node);
@@ -230,15 +230,15 @@ auto is_region_successor(const SESE::SESERegion& region,
 void Layout::edit_region_subgraph() {
     // return;
     for (const auto* edge : g_.edges()) {
-        const auto* from_region = &sese_->get_region(edge->from());
-        const auto* to_region   = &sese_->get_region(edge->to());
+        const auto* from_region = &sese_->get_region(edge->from);
+        const auto* to_region   = &sese_->get_region(edge->to);
 
         if (from_region != to_region) {
             if (is_region_successor(*from_region, *to_region)) {
                 // This is an entry edge
                 const auto* parent_region = from_region;
                 const auto* child_region  = to_region;
-                const auto* node_ptr      = edge->to();
+                const auto* node_ptr      = edge->to;
 
                 while (child_region != parent_region) {
                     // make everyone an entry node
@@ -250,12 +250,12 @@ void Layout::edit_region_subgraph() {
                 }
 
                 auto& ge = get_editor(*parent_region);
-                ge.edit_edge(*edge, *edge->from(), *node_ptr);
+                ge.edit_edge(*edge, *edge->from, *node_ptr);
             } else if (is_region_successor(*to_region, *from_region)) {
                 // This is an exit edge
                 const auto* parent_region = to_region;
                 const auto* child_region  = from_region;
-                const auto* node_ptr      = edge->from();
+                const auto* node_ptr      = edge->from;
 
                 while (child_region != parent_region) {
                     // make everyone an exit node
@@ -267,13 +267,13 @@ void Layout::edit_region_subgraph() {
                 }
 
                 auto& ge = get_editor(*parent_region);
-                ge.edit_edge(*edge, *node_ptr, *edge->to());
+                ge.edit_edge(*edge, *node_ptr, *edge->to);
             } else {
                 // The nodes connect through their parent
                 const auto& closest_ancestor =
                     get_closest_ancestor(*to_region, *from_region);
 
-                const auto* from_ptr = edge->from();
+                const auto* from_ptr = edge->from;
                 while (from_region != &closest_ancestor) {
                     // make everyone an exit node
                     regions_data_[from_region->id].exits.push_back(
@@ -283,7 +283,7 @@ void Layout::edit_region_subgraph() {
                     from_region = &from_region->parent();
                 }
 
-                const auto* to_ptr = edge->to();
+                const auto* to_ptr = edge->to;
                 while (to_region != &closest_ancestor) {
                     // make everyone an entry node
                     regions_data_[to_region->id].entries.push_back(

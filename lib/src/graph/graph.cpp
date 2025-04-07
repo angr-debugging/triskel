@@ -65,8 +65,8 @@ auto GraphEditor::make_edge(EdgeId id, NodeId from, NodeId to) -> Edge* {
 
     auto* edge = g_.get_edge(id);
 
-    edge->from_ = g_.data_.nodes[from].get();
-    edge->to_   = g_.data_.nodes[to].get();
+    edge->from = g_.data_.nodes[from].get();
+    edge->to   = g_.data_.nodes[to].get();
 
     edge->link();
 
@@ -97,11 +97,11 @@ void GraphEditor::remove_edge(EdgeId id) {
 void GraphEditor::edit_edge(EdgeId id, NodeId new_from, NodeId new_to) {
     auto& edge = *g_.data_.edges[id];
     // Save the old edge
-    frame().changes.push(Frame::ModifyEdge(edge, edge.from_, edge.to_));
+    frame().changes.push(Frame::ModifyEdge(edge, edge.from, edge.to));
     edge.unlink();
 
-    edge.from_ = g_.data_.nodes.at(new_from).get();
-    edge.to_   = g_.data_.nodes.at(new_to).get();
+    edge.from = g_.data_.nodes.at(new_from).get();
+    edge.to   = g_.data_.nodes.at(new_to).get();
     edge.link();
 }
 

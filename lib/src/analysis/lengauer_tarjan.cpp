@@ -98,7 +98,7 @@ auto triskel::make_idoms(const IGraph& g) -> NodeAttribute<const Node*> {
     for (const auto* w :
          nodes | std::ranges::views::drop(1) | std::ranges::views::reverse) {
         for (const auto* parent_edge : w->parent_edges()) {
-            const auto& v = parent_edge->from();
+            const auto& v = parent_edge->from;
             const auto* u = forest.eval(v);
             semis[*w]     = std::min(semis[*w], semis[*u]);
         }

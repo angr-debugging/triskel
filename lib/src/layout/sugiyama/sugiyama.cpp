@@ -172,7 +172,7 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
 
     // Remove the "kink" in the back edges from the ghost nodes
     for (const auto* edge : deleted_edges_) {
-        if (ys_[edge->from()] < ys_[edge->to()]) {
+        if (ys_[edge->from] < ys_[edge->to]) {
             continue;
         }
 
@@ -192,7 +192,7 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
 
 // We want to resize the node to take into account the edge
 void SugiyamaAnalysis::remove_self_loop(const Edge* edge) {
-    const auto& node = edge->to();
+    const auto& node = edge->to;
 
     // Change the padding to account for the new edge
     auto& padding = paddings_[node];
@@ -207,7 +207,7 @@ void SugiyamaAnalysis::remove_self_loop(const Edge* edge) {
 
 void SugiyamaAnalysis::draw_self_loops() {
     for (const auto* edge : self_loops_) {
-        const auto& node = edge->from();
+        const auto& node = edge->from;
 
         const auto width  = widths_[node];
         const auto height = heights_[node];
@@ -250,12 +250,12 @@ void SugiyamaAnalysis::cycle_removal() {
     for (const auto* edge : edges) {
         if (dfs.is_backedge(*edge)) {
             // Self loop
-            if (edge->to() == edge->from()) {
+            if (edge->to == edge->from) {
                 remove_self_loop(edge);
                 continue;
             }
 
-            ge.edit_edge(*edge, *edge->to(), *edge->from());
+            ge.edit_edge(*edge, *edge->to, *edge->from);
             is_flipped_.set(*edge, true);
         }
     }
@@ -393,8 +393,8 @@ void SugiyamaAnalysis::remove_long_edges() {
     std::stack<const Edge*> edges_to_split;
 
     for (const auto* edge : g.edges()) {
-        auto from_layer = layers_[edge->from()];
-        auto to_layer   = layers_[edge->to()];
+        auto from_layer = layers_[edge->from];
+        auto to_layer   = layers_[edge->to];
 
         auto bottom_layer = std::min(from_layer, to_layer);
         auto top_layer    = std::max(from_layer, to_layer);
@@ -418,14 +418,14 @@ void SugiyamaAnalysis::remove_long_edges() {
 
         // Arrows go from top to bottom
 
-        auto from_layer = layers_[edge->from()];
-        auto to_layer   = layers_[edge->to()];
+        auto from_layer = layers_[edge->from];
+        auto to_layer   = layers_[edge->to];
 
         auto bottom_layer = std::min(from_layer, to_layer);
         auto top_layer    = std::max(from_layer, to_layer);
 
-        auto* bottom = bottom_layer == from_layer ? edge->from() : edge->to();
-        auto* top    = top_layer == to_layer ? edge->to() : edge->from();
+        auto* bottom = bottom_layer == from_layer ? edge->from : edge->to;
+        auto* top    = top_layer == to_layer ? edge->to : edge->from;
 
         auto is_flipped = is_flipped_[edge];
 
@@ -462,7 +462,7 @@ void SugiyamaAnalysis::remove_long_edges() {
         if (!is_going_up) {
             std::ranges::reverse(waypoints);
             for (const auto* edge : waypoints) {
-                ge.edit_edge(*edge, *edge->to(), *edge->from());
+                ge.edit_edge(*edge, *edge->to, *edge->from);
             }
         }
 
@@ -754,8 +754,8 @@ void SugiyamaAnalysis::waypoint_creation() {
             // FIXME: vector
             auto edges = span_to_vec(node->child_edges());
             std::ranges::sort(edges, [&](const Edge* a, const Edge* b) {
-                auto order_a = orders_[a->to()];
-                auto order_b = orders_[b->to()];
+                auto order_a = orders_[a->to];
+                auto order_b = orders_[b->to];
 
                 if (order_a == order_b) {
                     return end_x_offset_[a] < end_x_offset_[b];
@@ -779,7 +779,7 @@ void SugiyamaAnalysis::waypoint_creation() {
                 //       __X__
                 //      |     |
 
-                assert(ys_[edge->to()] > ys_[edge->from()]);
+                assert(ys_[edge->to] > ys_[edge->from]);
 
                 auto& waypoints = waypoints_[edge];
 
@@ -794,7 +794,7 @@ void SugiyamaAnalysis::waypoint_creation() {
                 }
 
                 waypoints[0].y = y0;
-                waypoints[3].y = ys_[edge->to()];
+                waypoints[3].y = ys_[edge->to];
 
                 x += spacer;
             }
@@ -805,8 +805,8 @@ void SugiyamaAnalysis::waypoint_creation() {
             // FIXME: vector
             auto edges = span_to_vec(node->parent_edges());
             std::ranges::sort(edges, [&](const Edge* a, const Edge* b) {
-                auto order_a = orders_[a->from()];
-                auto order_b = orders_[b->from()];
+                auto order_a = orders_[a->from];
+                auto order_b = orders_[b->from];
 
                 // TODO: lexicographic comparison to account for back edges
                 // For this I need to know if it's coming from the left or
@@ -1005,21 +1005,21 @@ void SugiyamaAnalysis::translate_waypoints() {
     for (const auto* edge : g.edges()) {
         auto& waypoints = waypoints_[edge];
 
-        waypoints[0].x += xs_[edge->from()];
-        waypoints[1].x += xs_[edge->from()];
+        waypoints[0].x += xs_[edge->from];
+        waypoints[1].x += xs_[edge->from];
 
-        waypoints[2].x += xs_[edge->to()];
-        waypoints[3].x += xs_[edge->to()];
+        waypoints[2].x += xs_[edge->to];
+        waypoints[3].x += xs_[edge->to];
     }
 }
 
 void SugiyamaAnalysis::flip_edges() {
     auto& ge = g.editor();
     for (const auto* edge : g.edges()) {
-        assert(layers_[edge->to()] != layers_[edge->from()]);
+        assert(layers_[edge->to] != layers_[edge->from]);
 
-        if (layers_[edge->from()] < layers_[edge->to()]) {
-            ge.edit_edge(*edge, *edge->to(), *edge->from());
+        if (layers_[edge->from] < layers_[edge->to]) {
+            ge.edit_edge(*edge, *edge->to, *edge->from);
         }
     }
 }
@@ -1116,7 +1116,7 @@ void SugiyamaAnalysis::build_waypoints(const Edge* edge) {
 
     for (const auto* edge : edge_waypoints) {
         auto& ws = waypoints_[edge];
-        if (layers_[edge->from()] < layers_[edge->to()]) {
+        if (layers_[edge->from] < layers_[edge->to]) {
             waypoints.push_back(ws[0]);
             waypoints.push_back(ws[1]);
             waypoints.push_back(ws[2]);

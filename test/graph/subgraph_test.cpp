@@ -102,14 +102,14 @@ TEST(SubGraph, rmNode) {
     ASSERT_EQ(gg.node_count(), og_size_gg - 1);
 
     for (const auto* e : g.edges()) {
-        ASSERT_NE(e->from(), g.get_node(*n3));
-        ASSERT_NE(e->to(), g.get_node(*n3));
+        ASSERT_NE(e->from, g.get_node(*n3));
+        ASSERT_NE(e->to, g.get_node(*n3));
     }
 
     for (const auto* e : gg.edges()) {
-        fmt::print("{} (from: {}, n2: {}, = {})\n\n", *e, *e->from(), *n2,
-                   n2 == e->from());
-        ASSERT_NE(e->from(), n2);
+        fmt::print("{} (from: {}, n2: {}, = {})\n\n", *e, *e->from, *n2,
+                   n2 == e->from);
+        ASSERT_NE(e->from, n2);
     }
 
     for (const auto* n : g.nodes()) {
@@ -117,8 +117,8 @@ TEST(SubGraph, rmNode) {
     }
 
     for (const auto* e : g.edges()) {
-        ASSERT_NE(e->from(), n3);
-        ASSERT_NE(e->to(), n3);
+        ASSERT_NE(e->from, n3);
+        ASSERT_NE(e->to, n3);
     }
 
     ge.pop();
@@ -193,8 +193,8 @@ TEST(SubGraph, editEdge) {
 
     ge.edit_edge(*e3_4, *n1, *n5);
 
-    ASSERT_EQ(e3_4->from(), n1);
-    ASSERT_EQ(e3_4->to(), n5);
+    ASSERT_EQ(e3_4->from, n1);
+    ASSERT_EQ(e3_4->to, n5);
 
     ASSERT_TRUE(contains(n1->edges(), e3_4));
     ASSERT_TRUE(contains(n5->edges(), e3_4));
@@ -204,8 +204,8 @@ TEST(SubGraph, editEdge) {
 
     ge.pop();
 
-    ASSERT_EQ(e3_4->from(), n3);
-    ASSERT_EQ(e3_4->to(), n4);
+    ASSERT_EQ(e3_4->from, n3);
+    ASSERT_EQ(e3_4->to, n4);
 
     ASSERT_FALSE(contains(n1->edges(), e3_4));
     ASSERT_FALSE(contains(n5->edges(), e3_4));

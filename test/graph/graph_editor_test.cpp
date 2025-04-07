@@ -78,10 +78,10 @@ TEST(Editor, rmNode) {
     }
 
     for (const auto* e : g.edges()) {
-        ASSERT_NE(e->from(), n3);
-        ASSERT_NE(e->to(), n3);
+        ASSERT_NE(e->from, n3);
+        ASSERT_NE(e->to, n3);
 
-        ASSERT_NE(e->from(), n2);
+        ASSERT_NE(e->from, n2);
     }
 
     ge.pop();
@@ -147,8 +147,8 @@ TEST(Editor, editEdge) {
     ge.edit_edge(*e3_4, *n1, *n5);
 
     fmt::print("{} vs {}->{}\n", *e3_4, *n1, *n5);
-    ASSERT_EQ(e3_4->from(), n1);
-    ASSERT_EQ(e3_4->to(), n5);
+    ASSERT_EQ(e3_4->from, n1);
+    ASSERT_EQ(e3_4->to, n5);
 
     ASSERT_TRUE(std::ranges::contains(n1->child_edges(), e3_4));
     ASSERT_TRUE(std::ranges::contains(n5->parent_edges(), e3_4));
@@ -158,8 +158,8 @@ TEST(Editor, editEdge) {
 
     ge.pop();
 
-    ASSERT_EQ(e3_4->from(), n3);
-    ASSERT_EQ(e3_4->to(), n4);
+    ASSERT_EQ(e3_4->from, n3);
+    ASSERT_EQ(e3_4->to, n4);
 
     ASSERT_FALSE(std::ranges::contains(n1->child_edges(), e3_4));
     ASSERT_FALSE(std::ranges::contains(n5->parent_edges(), e3_4));

@@ -137,16 +137,14 @@ struct Edge : public Identifiable<EdgeTag> {
     auto operator=(const Edge&) -> Edge& = delete;
 
     [[nodiscard]] auto id() const -> EdgeId final;
-    [[nodiscard]] auto from() const -> Node*;
-    [[nodiscard]] auto to() const -> Node*;
 
     /// @brief Returns the other side of the edge
     [[nodiscard]] auto other(NodeId n) const -> Node*;
 
     EdgeId id_;
 
-    Node* from_;
-    Node* to_;
+    Node* from;
+    Node* to;
 
     /// @brief Adds the edge to each of its nodes
     void link();

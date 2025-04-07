@@ -30,7 +30,7 @@ SpanningTree::SpanningTree(const IGraph& g)
       cut_{g, 0} {}
 
 auto SpanningTree::slack(const Edge* edge) const -> size_t {
-    return ranks_[edge->to()] - ranks_[edge->from()] - 1;
+    return ranks_[edge->to] - ranks_[edge->from] - 1;
 }
 
 auto SpanningTree::is_tight(const Edge* edge) const -> bool {
@@ -79,7 +79,7 @@ void SpanningTree::init_rank() {
             queue.pop();
 
             for (const auto* child_edge : node->child_edges()) {
-                const auto& child = child_edge->to();
+                const auto& child = child_edge->to;
 
                 auto& in_degree = in_degrees[child];
                 in_degree--;
@@ -158,8 +158,8 @@ auto SpanningTree::low(const Node* n) const -> size_t {
 
 auto SpanningTree::get_component(const Edge* e, const Node* w) const
     -> int32_t {
-    const auto* u = e->from();
-    const auto* v = e->to();
+    const auto* u = e->from;
+    const auto* v = e->to;
 
     if (lim(v) <= lim(u)) {
         u = v;
@@ -176,7 +176,7 @@ void SpanningTree::init_cut_values(const Node* node, EdgeId tree_edge) {
     if (tree_edge == EdgeId::InvalidID) {
         for (const auto* edge : node->child_edges()) {
             if (e_in_tree_[*edge]) {
-                init_cut_values(edge->to(), *edge);
+                init_cut_values(edge->to, *edge);
             }
         }
 
@@ -206,7 +206,7 @@ void SpanningTree::init_cut_values(const Node* node, EdgeId tree_edge) {
     }
 
     cut_[tree_edge] =
-        g.get_edge(tree_edge)->to() == node ? cut_value : -cut_value;
+        g.get_edge(tree_edge)->to == node ? cut_value : -cut_value;
 }
 
 void SpanningTree::init_cut_values() {
@@ -218,12 +218,12 @@ auto SpanningTree::enter_edge(const Edge* e) -> const Edge* {
     auto min_slack = std::numeric_limits<size_t>::max();
     auto f         = EdgeId::InvalidID;
 
-    const auto from_component = get_component(e, e->from());
-    const auto to_component   = get_component(e, e->to());
+    const auto from_component = get_component(e, e->from);
+    const auto to_component   = get_component(e, e->to);
 
     for (const auto* edge : g.edges()) {
-        if (get_component(e, edge->to()) == from_component &&
-            get_component(e, edge->from()) == to_component && edge != e) {
+        if (get_component(e, edge->to) == from_component &&
+            get_component(e, edge->from) == to_component && edge != e) {
             const auto s = slack(edge);
             if (s < min_slack) {
                 min_slack = s;
@@ -244,14 +244,14 @@ void SpanningTree::update_ranks_rec(const Node* node,
     ranks_[node] += delta;
 
     for (const auto* edge : node->child_edges()) {
-        const auto& neighbor = edge->to();
+        const auto& neighbor = edge->to;
         if (e_in_tree_[*edge] && neighbor != parent) {
             update_ranks_rec(neighbor, node, delta);
         }
     }
 
     for (const auto* edge : node->parent_edges()) {
-        const auto& neighbor = edge->from();
+        const auto& neighbor = edge->from;
         if (e_in_tree_[*edge] && neighbor != parent) {
             update_ranks_rec(neighbor, node, delta);
         }
@@ -262,8 +262,8 @@ void SpanningTree::exchange(const Edge* e, const Edge* f) {
     e_in_tree_[e] = false;
 
     // update rank of the tail section
-    const auto* head = e->from();
-    const auto* tail = e->to();
+    const auto* head = e->from;
+    const auto* tail = e->to;
 
     if (lim(head) <= lim(tail)) {
         std::swap(tail, head);
@@ -320,7 +320,7 @@ void SpanningTree::feasible_tree() {
         const auto* edge = get_incident_edge();
         auto delta       = slack(edge);
 
-        if (in_tree_[edge->to()]) {
+        if (in_tree_[edge->to]) {
             delta = -delta;
         }
 
@@ -374,7 +374,7 @@ void SpanningTree::dump() {
     }
 
     for (const auto* edge : g.edges()) {
-        fmt::print("{} -> {} {}\n", *edge->from(), *edge->to(),
+        fmt::print("{} -> {} {}\n", *edge->from, *edge->to,
                    e_in_tree_[*edge]
                        ? fmt::format("[label=\"{}\"]", cut_[*edge])
                        : "[style=dotted]");

@@ -30,7 +30,7 @@ void Frame::ModifyEdge::revert(OwningGraph& graph) {
     auto& new_edge = graph.data_.edges[id];
     new_edge->unlink();
 
-    new_edge->from_ = from;
-    new_edge->to_   = to;
+    new_edge->from = from;
+    new_edge->to   = to;
     new_edge->link();
 }

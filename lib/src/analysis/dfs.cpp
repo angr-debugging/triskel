@@ -34,7 +34,7 @@ void DFS::dfs(const Node* node) {
     dfs_nums_[node] = nodes_.size() - 1;
 
     for (const auto* edge : node->child_edges()) {
-        const auto& child = edge->to();
+        const auto& child = edge->to;
         if (child == node) {
             continue;
         }
@@ -55,17 +55,17 @@ void DFS::type_edges() {
             continue;
         }
 
-        if (edge->to() == edge->from()) {
+        if (edge->to == edge->from) {
             types_.set(*edge, DFS::EdgeType::Back);
             continue;
         }
 
-        if (succeed(edge->from(), edge->to())) {
+        if (succeed(edge->from, edge->to)) {
             types_.set(*edge, DFS::EdgeType::Back);
             continue;
         }
 
-        if (succeed(edge->to(), edge->from())) {
+        if (succeed(edge->to, edge->from)) {
             types_.set(*edge, DFS::EdgeType::Forward);
             continue;
         }
