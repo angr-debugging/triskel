@@ -30,11 +30,11 @@ class CFGLayout:
 class EdgeType:
     """
     Members:
-    
+
       Default
-    
+
       T
-    
+
       F
     """
     Default: typing.ClassVar[EdgeType]  # value = <EdgeType.Default: 0>
@@ -133,6 +133,8 @@ def make_layout_builder() -> LayoutBuilder:
 def make_png_renderer() -> ExportingRenderer:
     ...
 def make_svg_renderer() -> ExportingRenderer:
+    ...
+def git_version() -> str:
     ...
 Default: EdgeType  # value = <EdgeType.Default: 0>
 F: EdgeType  # value = <EdgeType.F: 2>

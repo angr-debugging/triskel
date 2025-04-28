@@ -8,6 +8,7 @@ from pytriskel.pytriskel import Renderer
 from pytriskel.pytriskel import make_layout_builder
 from pytriskel.pytriskel import make_png_renderer
 from pytriskel.pytriskel import make_svg_renderer
+from pytriskel.pytriskel import git_version
 from . import pytriskel
 __all__: str = 'make_png_renderer'
 Default: EdgeType  # value = <EdgeType.Default: 0>

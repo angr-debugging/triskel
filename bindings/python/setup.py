@@ -2,7 +2,7 @@ import os
 from skbuild import setup
 from pathlib import Path
 
-CMAKE_ARGS = ["-DCMAKE_BUILD_TYPE=Release","-DENABLE_IMGUI=OFF","-DENABLE_LLVM=OFF"]
+CMAKE_ARGS = ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_IMGUI=OFF", "-DENABLE_LLVM=OFF", "-DENABLE_CAIRO=ON", "-DBUILD_BINDINGS=ON"]
 
 
 
