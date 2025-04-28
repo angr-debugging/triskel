@@ -78,4 +78,6 @@ PYBIND11_MODULE(pytriskel, m) {
     m.def("make_png_renderer", &triskel::make_png_renderer);
 
     m.def("make_svg_renderer", &triskel::make_svg_renderer);
+
+    m.def("git_version", &triskel::git_version);
 }

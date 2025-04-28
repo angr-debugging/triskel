@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.30)
 
 include(CMakeDependentOption)
 include(FetchContent)
@@ -32,6 +32,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 message(STATUS "Found fmt version ${fmt_VERSION}")
+
+FetchContent_Declare(cmake_git_version_tracking
+  GIT_REPOSITORY https://github.com/andrew-hardin/cmake-git-version-tracking.git
+)
+FetchContent_MakeAvailable(cmake_git_version_tracking)
 
 if(ENABLE_TESTING)
     message(STATUS "Building tests")

@@ -1,4 +1,5 @@
 #include "triskel/triskel.hpp"
+#include <fmt/format.h>
 #include "triskel/internal.hpp"
 
 #include <algorithm>
@@ -10,6 +11,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "git.h"
 
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
@@ -304,4 +307,9 @@ auto triskel::make_layout(
     -> std::unique_ptr<CFGLayout> {
     return std::make_unique<CFGLayoutImpl>(std::move(g), label, width, height,
                                            edge_types);
+}
+
+auto triskel::git_version() -> std::string {
+    return fmt::format("Commit: {}\nBranch: {}\nDirty: {}", git::CommitSHA1(),
+                       git::Branch(), git::AnyUncommittedChanges());
 }

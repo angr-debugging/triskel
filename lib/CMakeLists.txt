@@ -14,7 +14,7 @@ add_subdirectory(src)
 
 target_include_directories(triskel PUBLIC include)
 
-target_link_libraries(triskel PRIVATE fmt::fmt)
+target_link_libraries(triskel PRIVATE fmt::fmt cmake_git_version_tracking)
 
 if(ENABLE_LLVM)
   target_link_libraries(triskel PUBLIC LLVM)

@@ -168,8 +168,8 @@ struct LayoutBuilder {
     /// The label will determine the width and height of this node using the
     /// renderer
     /// @return The id of the node in the graph
-    virtual auto make_node(const Renderer& renderer,
-                           const std::string& label) -> size_t = 0;
+    virtual auto make_node(const Renderer& renderer, const std::string& label)
+        -> size_t = 0;
 
     /// @brief Calculates the dimension of each node using the renderer
     /// This will overwrite any existing widths and heights
@@ -191,6 +191,8 @@ struct LayoutBuilder {
 };
 
 [[nodiscard]] auto make_layout_builder() -> std::unique_ptr<LayoutBuilder>;
+
+[[nodiscard]] auto git_version() -> std::string;
 
 }  // namespace triskel
 
