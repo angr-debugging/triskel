@@ -44,5 +44,7 @@ struct VertexOrdering {
     void transpose();
 
     void swap(const Node* node, size_t i, size_t old_order, size_t new_order);
+
+    auto _sanity_are_parent_and_child_orders_valid() const -> bool;
 };
 }  // namespace triskel

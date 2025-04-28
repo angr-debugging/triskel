@@ -265,11 +265,15 @@ void SpanningTree::exchange(const Edge* e, const Edge* f) {
     const auto* head = e->from;
     const auto* tail = e->to;
 
+    size_t delta = slack(f);
+    if (get_component(e, f->to) == -1) {
+        delta = -delta;
+    }
+
     if (lim(head) <= lim(tail)) {
         std::swap(tail, head);
     }
 
-    const size_t delta = slack(f);
     update_ranks_rec(tail, nullptr, delta);
 
     e_in_tree_[f] = true;
@@ -397,6 +401,7 @@ auto triskel::network_simplex(const IGraph& graph)
     auto rank_count = spanning_tree.normalize_ranks();
 
     // Balance
+    // spanning_tree.dump();
 
     return std::make_unique<LayerAssignment>(spanning_tree.ranks_, rank_count);
 }

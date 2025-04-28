@@ -5,8 +5,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <ranges>
+#include <span>
 #include <utility>
 #include <vector>
+
+#include <fmt/base.h>
+#include <fmt/format.h>
 
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/attribute.hpp"
@@ -142,8 +146,17 @@ void VertexOrdering::swap(const Node* node,
         auto& arr = parent_orders_[child_e->to];
         auto it   = std::ranges::lower_bound(arr, old_order);
         if ((it == arr.begin() || *(it - 1) != i) &&
-            ((it + 1) == arr.end() || *(it + 1) != (i + 1))) {
+            ((it + 1) == arr.end() ||
+             (*(it + 1) != (i + 1) && *(it + 1) != i))) {
             *it = new_order;
+        } else {
+            // The array contains multiple of the same children / parent.
+            // recalculate the array
+            arr.clear();
+            for (const auto* parent : child_e->to->parent_edges()) {
+                arr.push_back(orders_[parent->from]);
+            }
+            std::ranges::sort(arr);
         }
     }
 
@@ -151,8 +164,17 @@ void VertexOrdering::swap(const Node* node,
         auto& arr = child_orders_[parent_e->from];
         auto it   = std::ranges::lower_bound(arr, old_order);
         if ((it == arr.begin() || *(it - 1) != i) &&
-            ((it + 1) == arr.end() || *(it + 1) != (i + 1))) {
+            ((it + 1) == arr.end() ||
+             (*(it + 1) != (i + 1) && *(it + 1) != i))) {
             *it = new_order;
+        } else {
+            // The array contains multiple of the same children / parent.
+            // recalculate the array
+            arr.clear();
+            for (const auto* child : parent_e->from->child_edges()) {
+                arr.push_back(orders_[child->to]);
+            }
+            std::ranges::sort(arr);
         }
     }
 }
@@ -214,6 +236,8 @@ void VertexOrdering::normalize_order() {
         }
     }
 
+    // _ZN3syn3lit5value31_$LT$impl$u20$syn..lit..Lit$GT$3new17h3405be299499c1f6E
+
     // TODO: this is over-complex
     for (const auto* node : g_.nodes()) {
         child_orders_[node] =
@@ -250,9 +274,35 @@ void VertexOrdering::median(size_t iter) {
     }
 }
 
+auto VertexOrdering::_sanity_are_parent_and_child_orders_valid() const -> bool {
+    for (const auto& nodes : node_layers_) {
+        for (const auto* node : nodes) {
+            const auto order = orders_[node];
+            assert(nodes[order] == node);
+
+            auto parent_orders = std::vector<size_t>{};
+            for (const auto* parent : node->parent_edges()) {
+                parent_orders.push_back(orders_[parent->from]);
+            }
+            std::ranges::sort(parent_orders);
+            const auto& actual1 = parent_orders_[node];
+            assert(parent_orders == actual1);
+
+            auto child_orders = std::vector<size_t>{};
+            for (const auto* child : node->child_edges()) {
+                child_orders.push_back(orders_[child->to]);
+            }
+            std::ranges::sort(child_orders);
+            const auto& actual = child_orders_[node];
+            assert(child_orders == actual);
+        }
+    }
+
+    return true;
+}
+
 void VertexOrdering::transpose() {
     auto improved = true;
-
     while (improved) {
         improved = false;
         for (auto& nodes : node_layers_) {
@@ -282,6 +332,8 @@ void VertexOrdering::transpose() {
                     // Swap in the parent and child order sets
                     swap(v, i, i, i + 1);
                     swap(w, i, i + 1, i);
+
+                    assert(_sanity_are_parent_and_child_orders_valid());
                 }
             }
         }
