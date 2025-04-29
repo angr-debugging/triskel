@@ -8,8 +8,6 @@ rm dist/* || true
 mkdir /build || true
 mkdir -p /build/wheelhouse || true
 
-yum install -y cairo cairo-devel
-
 export PLAT="manylinux_2_34_x86_64"
 
 function repair_wheel {
