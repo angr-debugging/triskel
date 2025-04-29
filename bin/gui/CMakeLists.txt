@@ -1,5 +1,5 @@
 project(triskel-gui
-    VERSION 1.0.0
+    VERSION ${TRISKEL_VERSION}
     DESCRIPTION "ImGui for the triskel CFG layout library"
     LANGUAGES CXX C
 )

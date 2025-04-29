@@ -17,7 +17,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="pytriskel",
-    version="0.2.0",
+    version="0.2.2",
     author="Jack Royer",
     author_email="jack.royer@inria.fr",
     license="MPL2.0",

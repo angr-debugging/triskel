@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.30)
 
 include(CMakeDependentOption)
 include(FetchContent)
+include(CPack)
+include(cmake/version.cmake)
 
 project(Triskel)
 
@@ -97,3 +99,7 @@ endif()
 
 add_subdirectory(bin)
 add_subdirectory(lib)
+
+set(CPACK_PACKAGE_NAME "triskel")
+set(CPACK_PACKAGE_VERSION ${TRISKEL_VERSION})
+set(CPACK_GENERATOR "ZIP")

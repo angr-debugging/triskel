@@ -19,6 +19,7 @@
 #include "triskel/layout/layout.hpp"
 #include "triskel/utils/attribute.hpp"
 #include "triskel/utils/point.hpp"
+#include "triskel/utils/version.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
@@ -310,6 +311,7 @@ auto triskel::make_layout(
 }
 
 auto triskel::git_version() -> std::string {
-    return fmt::format("Commit: {}\nBranch: {}\nDirty: {}", git::CommitSHA1(),
-                       git::Branch(), git::AnyUncommittedChanges());
+    return fmt::format("Version: {}\nCommit: {}\nBranch: {}\nDirty: {}",
+                       TRISKEL_VERSION, git::CommitSHA1(), git::Branch(),
+                       git::AnyUncommittedChanges());
 }

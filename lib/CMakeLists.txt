@@ -1,5 +1,5 @@
 project(triskel
-    VERSION 1.0.0
+    VERSION ${TRISKEL_VERSION}
     DESCRIPTION "Triskel: A graphing library for Control Flow Graphs"
     LANGUAGES CXX C)
 

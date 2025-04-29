@@ -1,5 +1,5 @@
 project(triskel-img
-    VERSION 1.0.0
+    VERSION ${TRISKEL_VERSION}
     DESCRIPTION "Image making binary for the triskel CFG layout library"
     LANGUAGES CXX C
 )
