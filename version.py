@@ -130,24 +130,29 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    is_new_tag = False
+
     if args.set_version:
         version = args.set_version
         validate_version(version)
-        create_git_tag(version)
+        is_new_tag = True
     else:
         version = get_git_version()
         if args.bump_patch:
             version = bump_patch(version)
-            create_git_tag(version)
+            is_new_tag = True
         elif args.bump_minor:
             version = bump_minor(version)
-            create_git_tag(version)
+            is_new_tag = True
         elif args.bump_major:
             version = bump_major(version)
-            create_git_tag(version)
+            is_new_tag = True
 
     print(f"Using version: {version}")
 
     write_version_py(version)
     write_version_hpp(version)
     write_version_cmake(version)
+
+    if is_new_tag:
+        create_git_tag(version)
