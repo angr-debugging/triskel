@@ -11,21 +11,28 @@
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/graph/subgraph.hpp"
+#include "triskel/layout/ilayout.hpp"
 #include "triskel/layout/sugiyama/sugiyama.hpp"
 #include "triskel/utils/attribute.hpp"
-#include "triskel/utils/constants.hpp"
 #include "triskel/utils/point.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
 using namespace triskel;
 
-Layout::Layout(Graph& g)
-    : Layout(g, NodeAttribute<float>{g, 1.0F}, NodeAttribute<float>{g, 1.0F}) {}
+Layout::Layout(Graph& g) : Layout(g, {}) {}
+
+Layout::Layout(Graph& g, const LayoutSettings& settings)
+    : Layout(g,
+             NodeAttribute<float>{g, 1.0F},
+             NodeAttribute<float>{g, 1.0F},
+             settings) {}
 
 Layout::Layout(Graph& g,
                const NodeAttribute<float>& heights,
-               const NodeAttribute<float>& widths)
-    : g_{g},
+               const NodeAttribute<float>& widths,
+               const LayoutSettings& settings)
+    : ILayout(settings),
+      g_{g},
       xs_(g, 0.0F),
       ys_(g, 0),
       waypoints_(g, {}),
@@ -373,7 +380,7 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
 
     auto sugiyama =
         SugiyamaAnalysis(*region.subgraph, heights_, widths_, start_x_offset_,
-                         end_x_offset_, region.entries, region.exits);
+                         end_x_offset_, region.entries, region.exits, settings);
 
     for (const auto* node : region.subgraph->nodes()) {
         auto x = sugiyama.xs_[node];
@@ -407,7 +414,7 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
     widths_[region.node_ptr]  = region.width;
 
     if (sugiyama.has_top_loop_) {
-        translate_region(r, {.x = 0, .y = -2 * Y_GUTTER});
+        translate_region(r, {.x = 0, .y = -2 * settings.Y_GUTTER});
     }
 }
 

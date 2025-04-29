@@ -1,7 +1,6 @@
 import os
 from skbuild import setup
 from pathlib import Path
-from version import __version__
 
 CMAKE_ARGS = [
     "-DCMAKE_BUILD_TYPE=Release",
@@ -21,9 +20,14 @@ build_dir = os.environ.get("SKBUILD_DIR", ".")
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
+version_py = (this_directory / "version.py").read_text()
+ns = {}
+exec(version_py, ns)
+version = ns["__version__"]
+
 setup(
     name="pytriskel",
-    version=__version__,
+    version=version,
     author="Jack Royer",
     author_email="jack.royer@inria.fr",
     license="MPL2.0",
@@ -35,6 +39,7 @@ setup(
     keywords=["cfg", "visualization", "reverse-engineering"],
     cmake_install_dir="pytriskel",
     cmake_source_dir="../..",
+    cmake_with_sdist=True,
     cmake_args=CMAKE_ARGS,
     zip_safe=False,
     options={"egg_info": {"egg_base": build_dir}},

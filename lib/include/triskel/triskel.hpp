@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "triskel/layout/ilayout.hpp"
 #include "triskel/utils/point.hpp"
 
 namespace triskel {
@@ -188,6 +189,23 @@ struct LayoutBuilder {
 
     /// @brief Lays out the CFG
     [[nodiscard]] virtual auto build() -> std::unique_ptr<CFGLayout> = 0;
+
+    /// @brief Change the X gutter size
+    void set_x_gutter(float x_gutter) { settings.X_GUTTER = x_gutter; };
+
+    /// @brief Change the Y gutter size
+    void set_y_gutter(float y_gutter) { settings.Y_GUTTER = y_gutter; };
+
+    /// @brief Change the edge height
+    void set_edge_height(float edge_height) {
+        settings.EDGE_HEIGHT = edge_height;
+    };
+
+    /// @brief Change the padding
+    void set_padding(float padding) { settings.PADDING = padding; };
+
+   protected:
+    LayoutSettings settings;
 };
 
 [[nodiscard]] auto make_layout_builder() -> std::unique_ptr<LayoutBuilder>;

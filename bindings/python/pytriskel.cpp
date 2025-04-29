@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <cstddef>
 #include "triskel/triskel.hpp"
 #include "triskel/utils/point.hpp"
@@ -34,7 +35,7 @@ PYBIND11_MODULE(pytriskel, m) {
              "Gets the waypoints of an edge")
         .def("get_height", &triskel::CFGLayout::get_height,
              "Gets height of the graph")
-        .def("get_height", &triskel::CFGLayout::get_width,
+        .def("get_width", &triskel::CFGLayout::get_width,
              "Gets width of the graph")
         .def(
             "save",
@@ -71,6 +72,16 @@ PYBIND11_MODULE(pytriskel, m) {
              "Creates a new edge", "from", "to", "type")
         .def("measure_nodes", &triskel::LayoutBuilder::measure_nodes,
              "Calculates the dimension of each node using the renderer")
+        .def("set_x_gutter", &triskel::LayoutBuilder::set_x_gutter,
+             "Change settings for X gutter")
+        .def("set_y_gutter", &triskel::LayoutBuilder::set_y_gutter,
+             "Change settings for Y gutter")
+        .def("set_edge_height", &triskel::LayoutBuilder::set_edge_height,
+             "Change settings for edge height")
+        .def("set_padding", &triskel::LayoutBuilder::set_padding,
+             "Change settings for padding")
+        .def("graphviz", &triskel::LayoutBuilder::graphviz,
+             "Dot representation for debugging")
         .def("build", &triskel::LayoutBuilder::build, "Builds the layout");
 
     m.def("make_layout_builder", &triskel::make_layout_builder);

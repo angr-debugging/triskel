@@ -1,4 +1,5 @@
 #include "triskel/layout/sugiyama/sugiyama.hpp"
+#include "triskel/layout/ilayout.hpp"
 #include "triskel/layout/sugiyama/layer_assignement.hpp"
 
 #include <algorithm>
@@ -69,13 +70,6 @@ void SugiyamaAnalysis::normalize_order() {
     }
 }
 
-SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g)
-    : SugiyamaAnalysis(g,
-                       NodeAttribute<float>{g, 1.0F},
-                       NodeAttribute<float>{g, 1.0F},
-                       EdgeAttribute<float>{g, -1.0F},
-                       EdgeAttribute<float>{g, -1.0F}) {}
-
 void SugiyamaAnalysis::init_node_layers() {
     node_layers_.clear();
     node_layers_.resize(layer_count_);
@@ -85,16 +79,35 @@ void SugiyamaAnalysis::init_node_layers() {
     }
 }
 
+SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g)
+    : SugiyamaAnalysis(g,
+                       NodeAttribute<float>{g, 1.0F},
+                       NodeAttribute<float>{g, 1.0F},
+                       EdgeAttribute<float>{g, -1.0F},
+                       EdgeAttribute<float>{g, -1.0F}) {}
+
+SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g, const LayoutSettings& settings)
+    : SugiyamaAnalysis(g,
+                       NodeAttribute<float>{g, 1.0F},
+                       NodeAttribute<float>{g, 1.0F},
+                       EdgeAttribute<float>{g, -1.0F},
+                       EdgeAttribute<float>{g, -1.0F},
+                       {},
+                       {},
+                       settings) {}
+
 SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
                                    const NodeAttribute<float>& heights,
-                                   const NodeAttribute<float>& widths)
+                                   const NodeAttribute<float>& widths,
+                                   const LayoutSettings& settings)
     : SugiyamaAnalysis(g,
                        heights,
                        widths,
                        EdgeAttribute<float>(g, -1),
                        EdgeAttribute<float>(g, -1),
                        {},
-                       {}) {}
+                       {},
+                       settings) {}
 
 SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
                                    const NodeAttribute<float>& heights,
@@ -102,13 +115,15 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
                                    const EdgeAttribute<float>& start_x_offset,
                                    const EdgeAttribute<float>& end_x_offset,
                                    const std::vector<IOPair>& entries,
-                                   const std::vector<IOPair>& exits)
-    : layers_(g, 0),
+                                   const std::vector<IOPair>& exits,
+                                   const LayoutSettings& settings)
+    : ILayout(settings),
+      layers_(g, 0),
       orders_(g, 0),
       waypoints_(g, {}),
       widths_(widths),
       heights_(heights),
-      paddings_(g, Padding::horizontal(X_GUTTER)),
+      paddings_(g, Padding::horizontal(settings.X_GUTTER)),
       xs_(g, 0.0F),
       ys_(g, 0.0F),
       edge_waypoints_(g, {}),
@@ -196,9 +211,9 @@ void SugiyamaAnalysis::remove_self_loop(const Edge* edge) {
 
     // Change the padding to account for the new edge
     auto& padding = paddings_[node];
-    padding.right += X_GUTTER;
-    padding.top += EDGE_HEIGHT;
-    padding.bottom += EDGE_HEIGHT;
+    padding.right += settings.X_GUTTER;
+    padding.top += settings.EDGE_HEIGHT;
+    padding.bottom += settings.EDGE_HEIGHT;
 
     self_loops_.push_back(edge);
 
@@ -214,9 +229,9 @@ void SugiyamaAnalysis::draw_self_loops() {
 
         // Revert the changes to the height and width
         auto& padding = paddings_[node];
-        padding.right -= X_GUTTER;
-        padding.top -= EDGE_HEIGHT;
-        padding.bottom -= EDGE_HEIGHT;
+        padding.right -= settings.X_GUTTER;
+        padding.top -= settings.EDGE_HEIGHT;
+        padding.bottom -= settings.EDGE_HEIGHT;
 
         // Translate the node down
         const auto x = xs_[node];
@@ -228,13 +243,15 @@ void SugiyamaAnalysis::draw_self_loops() {
             x + (width / static_cast<float>(node->children_count() + 1) *
                  static_cast<float>(node->children_count()));
 
-        waypoints_.set(
-            *edge, {{.x = bottom_x, .y = y + height},
-                    {.x = bottom_x, .y = y + height + EDGE_HEIGHT},
-                    {.x = x + width + X_GUTTER, .y = y + height + EDGE_HEIGHT},
-                    {.x = x + width + X_GUTTER, .y = y - EDGE_HEIGHT},
-                    {.x = top_x, .y = y - EDGE_HEIGHT},
-                    {.x = top_x, .y = y}});
+        waypoints_.set(*edge,
+                       {{.x = bottom_x, .y = y + height},
+                        {.x = bottom_x, .y = y + height + settings.EDGE_HEIGHT},
+                        {.x = x + width + settings.X_GUTTER,
+                         .y = y + height + settings.EDGE_HEIGHT},
+                        {.x = x + width + settings.X_GUTTER,
+                         .y = y - settings.EDGE_HEIGHT},
+                        {.x = top_x, .y = y - settings.EDGE_HEIGHT},
+                        {.x = top_x, .y = y}});
     }
 }
 
@@ -369,9 +386,9 @@ auto SugiyamaAnalysis::create_waypoint() -> Node* {
     auto& editor   = g.editor();
     auto* waypoint = editor.make_node();
 
-    heights_[waypoint]    = WAYPOINT_HEIGHT;
-    widths_[waypoint]     = WAYPOINT_WIDTH;
-    priorities_[waypoint] = WAYPOINT_PRIORITY;
+    heights_[waypoint]    = settings.WAYPOINT_HEIGHT;
+    widths_[waypoint]     = settings.WAYPOINT_WIDTH;
+    priorities_[waypoint] = settings.WAYPOINT_PRIORITY;
     dummy_nodes_.push_back(waypoint);
 
     return waypoint;
@@ -639,7 +656,7 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
     auto layer_gap = 0.0F;
 
     if (has_top_loop_) {
-        y -= 2 * Y_GUTTER;
+        y -= 2 * settings.Y_GUTTER;
     }
 
     // The highest layer is on top
@@ -648,17 +665,17 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
         auto layer_height = 0.0F;
 
         // The space between this layer and the next
-        layer_gap = 2.0F * Y_GUTTER;
+        layer_gap = 2.0F * settings.Y_GUTTER;
 
         auto nodes = node_layers_[layer];
         for (const auto* node : nodes) {
             layer_height = std::max(layer_height,
                                     heights_[node] + paddings_[node].height());
-            layer_gap +=
-                static_cast<float>(node->children_count()) * EDGE_HEIGHT;
+            layer_gap += static_cast<float>(node->children_count()) *
+                         settings.EDGE_HEIGHT;
         }
 
-        if (layer_gap == 2.0F * Y_GUTTER) {
+        if (layer_gap == 2.0F * settings.Y_GUTTER) {
             // No edges in this gap
             layer_gap = 0;
         }
@@ -667,7 +684,7 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
     }
 
     if (has_bottom_loop_) {
-        y -= 2 * Y_GUTTER;
+        y -= 2 * settings.Y_GUTTER;
     }
 
     return y;
@@ -991,12 +1008,12 @@ void SugiyamaAnalysis::calculate_waypoints_y() {
             const auto* edge = edges[i];
             auto& waypoints  = waypoints_[edge];
 
-            waypoints[1].y =
-                waypoints[3].y - Y_GUTTER -
-                static_cast<float>(layers[i] - min_layer) * EDGE_HEIGHT;
-            waypoints[2].y =
-                waypoints[3].y - Y_GUTTER -
-                static_cast<float>(layers[i] - min_layer) * EDGE_HEIGHT;
+            waypoints[1].y = waypoints[3].y - settings.Y_GUTTER -
+                             static_cast<float>(layers[i] - min_layer) *
+                                 settings.EDGE_HEIGHT;
+            waypoints[2].y = waypoints[3].y - settings.Y_GUTTER -
+                             static_cast<float>(layers[i] - min_layer) *
+                                 settings.EDGE_HEIGHT;
         }
     }
 }
@@ -1033,17 +1050,17 @@ void SugiyamaAnalysis::y_coordinate_assignment() {
         auto layer_height = 0.0F;
 
         // The space between this layer and the next
-        auto layer_gap = 2.0F * Y_GUTTER;
+        auto layer_gap = 2.0F * settings.Y_GUTTER;
 
         auto nodes = node_layers_[layer];
         for (const auto* node : nodes) {
             ys_[node]    = y;
             layer_height = std::max(layer_height, heights_[node]);
-            layer_gap +=
-                static_cast<float>(node->children_count()) * EDGE_HEIGHT;
+            layer_gap += static_cast<float>(node->children_count()) *
+                         settings.EDGE_HEIGHT;
         }
 
-        if (layer_gap == 2.0F * Y_GUTTER) {
+        if (layer_gap == 2.0F * settings.Y_GUTTER) {
             // No edges in this gap
             layer_gap = 0.0F;
         }

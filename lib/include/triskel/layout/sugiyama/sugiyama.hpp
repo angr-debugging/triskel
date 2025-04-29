@@ -37,9 +37,12 @@ static_assert(std::is_trivially_copyable_v<IOPair>);
 struct SugiyamaAnalysis : public ILayout {
     explicit SugiyamaAnalysis(IGraph& g);
 
+    explicit SugiyamaAnalysis(IGraph& g, const LayoutSettings& settings);
+
     explicit SugiyamaAnalysis(IGraph& g,
                               const NodeAttribute<float>& heights,
-                              const NodeAttribute<float>& widths);
+                              const NodeAttribute<float>& widths,
+                              const LayoutSettings& settings);
 
     explicit SugiyamaAnalysis(IGraph& g,
                               const NodeAttribute<float>& heights,
@@ -47,7 +50,8 @@ struct SugiyamaAnalysis : public ILayout {
                               const EdgeAttribute<float>& start_x_offset,
                               const EdgeAttribute<float>& end_x_offset,
                               const std::vector<IOPair>& entries = {},
-                              const std::vector<IOPair>& exits   = {});
+                              const std::vector<IOPair>& exits   = {},
+                              const LayoutSettings& settings     = {});
 
     ~SugiyamaAnalysis() override = default;
 

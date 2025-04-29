@@ -16,6 +16,7 @@
 
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
+#include "triskel/layout/ilayout.hpp"
 #include "triskel/layout/layout.hpp"
 #include "triskel/utils/attribute.hpp"
 #include "triskel/utils/point.hpp"
@@ -59,13 +60,14 @@ struct CFGLayoutImpl : CFGLayout {
                   const NodeAttribute<std::string>& labels,
                   const NodeAttribute<float>& widths,
                   const NodeAttribute<float>& heights,
-                  const EdgeAttribute<LayoutBuilder::EdgeType>& edge_types)
+                  const EdgeAttribute<LayoutBuilder::EdgeType>& edge_types,
+                  const LayoutSettings& settings)
         : graph_{std::move(graph)},
           labels_{labels},
           widths_{widths},
           heights_{heights},
           edge_types_(edge_types),
-          layout_{*graph_, heights_, widths_} {}
+          layout_{*graph_, heights_, widths_, settings} {}
 
     [[nodiscard]] auto get_coords(size_t node) const -> Point override {
         auto id = get_node_id(*graph_, node);
@@ -248,8 +250,9 @@ struct LayoutBuilderImpl : LayoutBuilder {
         // End edits
         graph_->editor().commit();
 
-        auto layout = std::make_unique<CFGLayoutImpl>(
-            std::move(graph_), labels_, widths_, heights_, edge_types_);
+        auto layout =
+            std::make_unique<CFGLayoutImpl>(std::move(graph_), labels_, widths_,
+                                            heights_, edge_types_, settings);
 
         return layout;
     }
@@ -306,8 +309,9 @@ auto triskel::make_layout(
     const NodeAttribute<std::string>& label,
     const EdgeAttribute<LayoutBuilder::EdgeType>& edge_types)
     -> std::unique_ptr<CFGLayout> {
+    LayoutSettings settings;
     return std::make_unique<CFGLayoutImpl>(std::move(g), label, width, height,
-                                           edge_types);
+                                           edge_types, settings);
 }
 
 auto triskel::git_version() -> std::string {

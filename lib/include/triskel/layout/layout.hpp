@@ -18,7 +18,9 @@ namespace triskel {
 struct Layout : public ILayout {
     Layout(Graph& g,
            const NodeAttribute<float>& heights,
-           const NodeAttribute<float>& widths);
+           const NodeAttribute<float>& widths,
+           const LayoutSettings& settings);
+    explicit Layout(Graph& g, const LayoutSettings& settings);
     explicit Layout(Graph& g);
 
     [[nodiscard]] auto get_x(NodeId node) const -> float override;
