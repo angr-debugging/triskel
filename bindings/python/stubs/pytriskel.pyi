@@ -1,27 +1,22 @@
 from __future__ import annotations
 import typing
-__all__ = ['CFGLayout', 'Default', 'EdgeType', 'ExportingRenderer', 'F', 'LayoutBuilder', 'Point', 'Renderer', 'T', 'make_layout_builder', 'make_png_renderer', 'make_svg_renderer']
+__all__ = ['CFGLayout', 'Default', 'EdgeType', 'ExportingRenderer', 'F', 'LayoutBuilder', 'Point', 'Renderer', 'T', 'git_version', 'make_layout_builder', 'make_png_renderer', 'make_svg_renderer']
 class CFGLayout:
-    @staticmethod
-    def _pybind11_conduit_v1_(*args, **kwargs):
-        ...
     def get_coords(self, arg0: int) -> Point:
         """
         Gets the x and y coordinate of a node
         """
-    @typing.overload
     def get_height(self) -> float:
         """
         Gets height of the graph
         """
-    @typing.overload
-    def get_height(self) -> float:
-        """
-        Gets width of the graph
-        """
-    def get_waypoints(self, arg0: int) -> ...:
+    def get_waypoints(self, arg0: int) -> list[Point]:
         """
         Gets the waypoints of an edge
+        """
+    def get_width(self) -> float:
+        """
+        Gets width of the graph
         """
     def save(self, arg0: ExportingRenderer, arg1: str) -> None:
         """
@@ -30,20 +25,17 @@ class CFGLayout:
 class EdgeType:
     """
     Members:
-
+    
       Default
-
+    
       T
-
+    
       F
     """
     Default: typing.ClassVar[EdgeType]  # value = <EdgeType.Default: 0>
     F: typing.ClassVar[EdgeType]  # value = <EdgeType.F: 2>
     T: typing.ClassVar[EdgeType]  # value = <EdgeType.T: 1>
     __members__: typing.ClassVar[dict[str, EdgeType]]  # value = {'Default': <EdgeType.Default: 0>, 'T': <EdgeType.T: 1>, 'F': <EdgeType.F: 2>}
-    @staticmethod
-    def _pybind11_conduit_v1_(*args, **kwargs):
-        ...
     def __eq__(self, other: typing.Any) -> bool:
         ...
     def __getstate__(self) -> int:
@@ -71,16 +63,15 @@ class EdgeType:
     def value(self) -> int:
         ...
 class ExportingRenderer(Renderer):
-    @staticmethod
-    def _pybind11_conduit_v1_(*args, **kwargs):
-        ...
+    pass
 class LayoutBuilder:
-    @staticmethod
-    def _pybind11_conduit_v1_(*args, **kwargs):
-        ...
     def build(self) -> CFGLayout:
         """
         Builds the layout
+        """
+    def graphviz(self) -> str:
+        """
+        Dot representation for debugging
         """
     @typing.overload
     def make_edge(self, arg0: int, arg1: int) -> int:
@@ -116,25 +107,36 @@ class LayoutBuilder:
         """
         Calculates the dimension of each node using the renderer
         """
+    def set_edge_height(self, arg0: float) -> None:
+        """
+        Change settings for edge height
+        """
+    def set_padding(self, arg0: float) -> None:
+        """
+        Change settings for padding
+        """
+    def set_x_gutter(self, arg0: float) -> None:
+        """
+        Change settings for X gutter
+        """
+    def set_y_gutter(self, arg0: float) -> None:
+        """
+        Change settings for Y gutter
+        """
 class Point:
     x: float
     y: float
-    @staticmethod
-    def _pybind11_conduit_v1_(*args, **kwargs):
-        ...
     def __init__(self, arg0: int, arg1: int) -> None:
         ...
 class Renderer:
-    @staticmethod
-    def _pybind11_conduit_v1_(*args, **kwargs):
-        ...
+    pass
+def git_version() -> str:
+    ...
 def make_layout_builder() -> LayoutBuilder:
     ...
 def make_png_renderer() -> ExportingRenderer:
     ...
 def make_svg_renderer() -> ExportingRenderer:
-    ...
-def git_version() -> str:
     ...
 Default: EdgeType  # value = <EdgeType.Default: 0>
 F: EdgeType  # value = <EdgeType.F: 2>

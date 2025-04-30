@@ -90,7 +90,7 @@ auto triskel::format_as(const Edge& e) -> std::string {
     return fmt::format("{} -> {}", *e.from, *e.to);
 }
 
-auto triskel::format_as(IGraph& g) -> std::string {
+auto triskel::format_as(const IGraph& g) -> std::string {
     auto s = std::string{"digraph G {\n"};
 
     for (auto* node : g.nodes()) {

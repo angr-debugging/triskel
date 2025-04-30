@@ -4,4 +4,5 @@ PRIVATE
   sugiyama.cpp
   vertex_ordering.cpp
   tamassia.cpp
+  x_assignment.cpp
 )

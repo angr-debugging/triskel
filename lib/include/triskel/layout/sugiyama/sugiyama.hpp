@@ -77,6 +77,32 @@ struct SugiyamaAnalysis : public ILayout {
     NodeAttribute<float> xs_;
     NodeAttribute<float> ys_;
 
+    IGraph& g;
+
+    /// @brief The number of layers in the graph view
+    size_t layer_count_;
+
+    /// @brief The inner edges that a long edge follows
+    EdgeAttribute<std::vector<const Edge*>> inner_edges_;
+
+    /// @brief Is an edge an inner edge
+    EdgeAttribute<bool> is_inner_;
+
+    /// @brief Long edges that get deleted and replaced by inner edges
+    std::vector<const Edge*> long_edges_;
+
+    /// @brief Hack
+    EdgeAttribute<bool> is_flipped_;
+
+    /// @brief Nodes that were created in Sugiyama
+    std::vector<const Node*> dummy_nodes_;
+
+    /// @brief The nodes on a given layer
+    std::vector<std::vector<const Node*>> node_layers_;
+    void init_node_layers();
+
+    std::default_random_engine rng_;
+
     struct Padding {
         float top;
         float bottom;
@@ -111,17 +137,43 @@ struct SugiyamaAnalysis : public ILayout {
     // Priorities in the coordinate assignment
     NodeAttribute<uint8_t> priorities_;
 
+    /// @brief Coordinates an edge follows
     EdgeAttribute<std::vector<Point>> waypoints_;
-    EdgeAttribute<float> offsets_to_;
-    EdgeAttribute<float> offsets_from_;
+
+    /// @deprecated
     EdgeAttribute<float> edge_weights_;
 
-    auto layer_view(size_t layer);
+    /// @brief Edges with the same node as origin and destination
+    /// These get deleted and added manually later on
+    std::vector<const Edge*> self_loops_;
+
+    /// @brief Edges entering the region
+    std::vector<IOPair> entries;
+
+    /// @brief Edges exiting the region
+    std::vector<IOPair> exits;
+
+    /// @brief The first coordinate of an edge
+    EdgeAttribute<float> start_x_offset_;
+
+    /// @brief The last coordinate of an edge
+    EdgeAttribute<float> end_x_offset_;
+
+    /// @brief Edges entering or exiting the region
+    std::map<Pair, const Edge*> io_edges_;
+
+    /// @brief Waypoints for the io edges
+    std::map<Pair, std::vector<Point>> io_waypoints_;
+
+    /// @brief The width of the graph
+    float width_;
+
+    /// @brief The height of the graph
+    float height_;
 
     // Ensures the order on each layer has nodes 1 unit from each other
     void normalize_order();
 
-    std::vector<const Edge*> self_loops_;
     void remove_self_loop(const Edge* edge);
 
     void draw_self_loops();
@@ -186,10 +238,10 @@ struct SugiyamaAnalysis : public ILayout {
     void build_waypoints(const Edge* edge);
     void build_long_edges_waypoints();
 
-    float width_;
+    auto make_inner_edge(const Node* from, const Node* to) -> Edge*;
+
     [[nodiscard]] auto compute_graph_width() -> float;
 
-    float height_;
     [[nodiscard]] auto compute_graph_height() -> float;
 
     // ----- Entry and exits -----
@@ -197,17 +249,7 @@ struct SugiyamaAnalysis : public ILayout {
     /// layers
     void ensure_io_at_extremities();
 
-    std::vector<IOPair> entries;
-    std::vector<IOPair> exits;
-
-    EdgeAttribute<float> start_x_offset_;
-    EdgeAttribute<float> end_x_offset_;
-
-    std::map<Pair, const Edge*> io_edges_;
-
     [[nodiscard]] auto is_io_edge(const Edge* edge) const -> bool;
-
-    std::map<Pair, std::vector<Point>> io_waypoints_;
 
     // Saves the data of the I/O waypoints
     void make_io_waypoint(IOPair pair);
@@ -217,26 +259,6 @@ struct SugiyamaAnalysis : public ILayout {
 
     bool has_top_loop_    = false;
     bool has_bottom_loop_ = false;
-
-    // std::vector<Point> exit_waypoints_;
-    // const Edge* exit_edge_ = const Edge*::InvalidID;
-
-    EdgeAttribute<std::vector<const Edge*>> edge_waypoints_;
-    std::vector<const Edge*> deleted_edges_;
-
-    EdgeAttribute<bool> is_flipped_;
-
-    std::vector<const Node*> dummy_nodes_;
-
-    /// @brief The nodes on a given layer
-    std::vector<std::vector<const Node*>> node_layers_;
-    void init_node_layers();
-
-    std::default_random_engine rng_;
-
-    size_t layer_count_;
-
-    IGraph& g;
 
     friend struct Layout;
 };

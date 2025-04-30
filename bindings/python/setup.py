@@ -36,6 +36,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=["pytriskel"],
+    package_data={"pytriskel": ["stubs/pytriskel.pyi"]},
+    include_package_data=True,
     keywords=["cfg", "visualization", "reverse-engineering"],
     cmake_install_dir="pytriskel",
     cmake_source_dir="../..",

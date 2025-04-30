@@ -22,6 +22,7 @@
 #include "triskel/analysis/dfs.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/layout/sugiyama/vertex_ordering.hpp"
+#include "triskel/layout/sugiyama/x_coordinate_assignment.hpp"
 #include "triskel/utils/attribute.hpp"
 #include "triskel/utils/constants.hpp"
 #include "triskel/utils/generator.hpp"
@@ -44,11 +45,6 @@ void graph_sanity(const IGraph& g) {
     }
 }
 }  // namespace
-
-auto SugiyamaAnalysis::layer_view(size_t layer) {
-    return std::ranges::views::filter(
-        [layer, this](const Node* node) { return layers_[node] == layer; });
-}
 
 void SugiyamaAnalysis::normalize_order() {
     for (size_t l = 0; l < layer_count_; ++l) {
@@ -126,16 +122,15 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
       paddings_(g, Padding::horizontal(settings.X_GUTTER)),
       xs_(g, 0.0F),
       ys_(g, 0.0F),
-      edge_waypoints_(g, {}),
+      inner_edges_(g, {}),
       is_flipped_(g, false),
-      offsets_to_(g, 0.0F),
-      offsets_from_(g, 0.0F),
       edge_weights_(g, 1.0F),
       priorities_(g, 0),
       entries(entries),
       exits(exits),
       start_x_offset_(start_x_offset),
       end_x_offset_(end_x_offset),
+      is_inner_(g, false),
       g{g}
 
 {
@@ -145,8 +140,6 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
     cycle_removal();
 
     layer_assignment();
-
-    // slide_nodes();
 
     ensure_io_at_extremities();
 
@@ -186,7 +179,7 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
     draw_self_loops();
 
     // Remove the "kink" in the back edges from the ghost nodes
-    for (const auto* edge : deleted_edges_) {
+    for (const auto* edge : long_edges_) {
         if (ys_[edge->from] < ys_[edge->to]) {
             continue;
         }
@@ -405,6 +398,13 @@ auto SugiyamaAnalysis::is_io_edge(const Edge* edge) const -> bool {
         io_edges_, [&edge](const auto& kv) { return kv.second == edge; });
 }
 
+auto SugiyamaAnalysis::make_inner_edge(const Node* from, const Node* to)
+    -> Edge* {
+    auto* new_edge      = g.editor().make_edge(*from, *to);
+    is_inner_[new_edge] = true;
+    return new_edge;
+}
+
 // TODO: split edges on the same layer
 void SugiyamaAnalysis::remove_long_edges() {
     std::stack<const Edge*> edges_to_split;
@@ -426,11 +426,11 @@ void SugiyamaAnalysis::remove_long_edges() {
         const auto* edge = edges_to_split.top();
         edges_to_split.pop();
 
-        auto& waypoints = edge_waypoints_[edge];
+        auto& inner_edges = inner_edges_[edge];
 
         if (!is_io_edge(edge)) {
             // IO edges are handles differently
-            deleted_edges_.push_back(edge);
+            long_edges_.push_back(edge);
         }
 
         // Arrows go from top to bottom
@@ -459,8 +459,8 @@ void SugiyamaAnalysis::remove_long_edges() {
         for (size_t layer = bottom_layer + 1; layer < top_layer; layer++) {
             auto* waypoint = create_ghost_node(layer);
 
-            auto* new_edge = ge.make_edge(*waypoint, *previous_point);
-            waypoints.push_back(new_edge);
+            auto* new_edge = make_inner_edge(waypoint, previous_point);
+            inner_edges.push_back(new_edge);
             if (is_going_up && (layer == bottom_layer + 1)) {
                 edge_weights_[new_edge] = 0;
             }
@@ -468,8 +468,8 @@ void SugiyamaAnalysis::remove_long_edges() {
             previous_point = waypoint;
         }
 
-        auto* new_edge = ge.make_edge(*top, *previous_point);
-        waypoints.push_back(new_edge);
+        auto* new_edge = make_inner_edge(top, previous_point);
+        inner_edges.push_back(new_edge);
         if (is_going_up) {
             edge_weights_[new_edge] = 0;
         }
@@ -477,8 +477,8 @@ void SugiyamaAnalysis::remove_long_edges() {
         // TODO: I can just say these edges are flipped and remove a lot of
         // complexity
         if (!is_going_up) {
-            std::ranges::reverse(waypoints);
-            for (const auto* edge : waypoints) {
+            std::ranges::reverse(inner_edges);
+            for (const auto* edge : inner_edges) {
                 ge.edit_edge(*edge, *edge->to, *edge->from);
             }
         }
@@ -690,6 +690,13 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
     return y;
 }
 
+#if 1
+void SugiyamaAnalysis::x_coordinate_assignment() {
+    xs_ = make_x_coords(g, node_layers_, layers_, orders_, widths_, is_inner_,
+                        start_x_offset_, end_x_offset_);
+}
+
+#else
 void SugiyamaAnalysis::x_coordinate_assignment() {
     auto priorities = NodeAttribute<size_t>{g.max_node_id(), 0};
 
@@ -727,6 +734,7 @@ void SugiyamaAnalysis::x_coordinate_assignment() {
         coordinate_assignment_iteration(r, r - 1, graph_width);
     }
 }
+#endif
 
 auto SugiyamaAnalysis::get_x(NodeId node) const -> float {
     return xs_.get(node);
@@ -1117,14 +1125,14 @@ void SugiyamaAnalysis::make_io_waypoints() {
 }
 
 void SugiyamaAnalysis::build_long_edges_waypoints() {
-    for (const auto* edge : deleted_edges_) {
+    for (const auto* edge : long_edges_) {
         build_waypoints(edge);
     }
 }
 
 void SugiyamaAnalysis::build_waypoints(const Edge* edge) {
     auto& waypoints      = waypoints_[edge];
-    auto& edge_waypoints = edge_waypoints_[edge];
+    auto& edge_waypoints = inner_edges_[edge];
 
     // No waypoints to build
     if (edge_waypoints.empty()) {

@@ -6,14 +6,13 @@
 #include "triskel/utils/attribute.hpp"
 
 namespace triskel {
-struct XCoordAssignment {
-    /// @brief node_layers contains for each layer the nodes sorted by order
-    XCoordAssignment(const IGraph& g,
-                     const std::vector<std::vector<const Node*>>& node_layers);
-
-    const IGraph& g_;
-    std::vector<std::vector<const Node*>>& node_layers_;
-
-    NodeAttribute<float> x_;
-};
+auto make_x_coords(const IGraph& g,
+                   const std::vector<std::vector<const Node*>>& layers,
+                   const NodeAttribute<size_t>& layer,
+                   const NodeAttribute<size_t>& order,
+                   const NodeAttribute<float>& widths,
+                   const EdgeAttribute<bool>& is_dummy,
+                   const EdgeAttribute<float>& start_x_offset,
+                   const EdgeAttribute<float>& end_x_offset)
+    -> NodeAttribute<float>;
 }  // namespace triskel

@@ -196,7 +196,7 @@ struct IGraph {
 
 auto format_as(const Node& n) -> std::string;
 auto format_as(const Edge& e) -> std::string;
-auto format_as(IGraph& g) -> std::string;
+auto format_as(const IGraph& g) -> std::string;
 struct IGraphEditor {
     virtual ~IGraphEditor() = default;
 
