@@ -185,11 +185,11 @@ struct LayoutBuilderImpl : LayoutBuilder {
         return static_cast<size_t>(graph_->editor().make_node()->id());
     }
 
-    auto make_node(float height, float width) -> size_t override {
+    auto make_node(float width, float height) -> size_t override {
         auto node = graph_->editor().make_node()->id();
 
-        heights_.set(node, height);
         widths_.set(node, width);
+        heights_.set(node, height);
 
         return static_cast<size_t>(node);
     }

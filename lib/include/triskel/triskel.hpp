@@ -158,7 +158,7 @@ struct LayoutBuilder {
     /// @brief Adds a node to the graph.
     /// This node will have a custom size
     /// @return The id of the node in the graph
-    virtual auto make_node(float height, float width) -> size_t = 0;
+    virtual auto make_node(float width, float height) -> size_t = 0;
 
     /// @brief Adds a node to the graph.
     /// The label will determine the width and height of this node
