@@ -132,6 +132,7 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
       start_x_offset_(start_x_offset),
       end_x_offset_(end_x_offset),
       is_inner_(g, false),
+      is_dummy_(g, false),
       g{g}
 
 {
@@ -456,7 +457,8 @@ void SugiyamaAnalysis::remove_long_edges() {
 
         auto* previous_point = bottom;
         for (size_t layer = bottom_layer + 1; layer < top_layer; layer++) {
-            auto* waypoint = create_ghost_node(layer);
+            auto* waypoint      = create_ghost_node(layer);
+            is_dummy_[waypoint] = true;
 
             auto* new_edge = make_inner_edge(waypoint, previous_point);
             inner_edges.push_back(new_edge);
@@ -635,7 +637,7 @@ auto SugiyamaAnalysis::compute_graph_width() -> float {
         auto layer_width = 0.0F;
 
         for (const auto* node : layer) {
-            layer_width += widths_[node] + paddings_[node].width();
+            layer_width = std::max(layer_width, widths_[node] + xs_[node]);
         }
 
         graph_width = std::max(graph_width, layer_width);
@@ -653,48 +655,26 @@ auto SugiyamaAnalysis::get_graph_height() const -> float {
 }
 
 auto SugiyamaAnalysis::compute_graph_height() -> float {
-    auto y         = 0.0F;
-    auto layer_gap = 0.0F;
+    auto max_y = 0.0F;
+    auto min_y = std::numeric_limits<float>::min();
 
-    if (has_top_loop_) {
-        y -= 2 * settings.Y_GUTTER;
+    for (const auto* node : g.nodes()) {
+        const auto y = ys_[node];
+        min_y        = std::min(min_y, y);
+        max_y        = std::max(max_y, y + heights_[node]);
     }
 
-    // The highest layer is on top
-    for (size_t layer = layer_count_ - 1; layer < layer_count_; --layer) {
-        // The height of the biggest node in this layer
-        auto layer_height = 0.0F;
-
-        // The space between this layer and the next
-        layer_gap = 2.0F * settings.Y_GUTTER;
-
-        auto nodes = node_layers_[layer];
-        for (const auto* node : nodes) {
-            layer_height = std::max(layer_height,
-                                    heights_[node] + paddings_[node].height());
-            layer_gap += static_cast<float>(node->children_count()) *
-                         settings.EDGE_HEIGHT;
-        }
-
-        if (layer_gap == 2.0F * settings.Y_GUTTER) {
-            // No edges in this gap
-            layer_gap = 0;
-        }
-
-        y += layer_height + layer_gap;
+    for (const auto* node : g.nodes()) {
+        ys_[node] -= min_y;
     }
 
-    if (has_bottom_loop_) {
-        y -= 2 * settings.Y_GUTTER;
-    }
-
-    return y;
+    return max_y - min_y;
 }
 
 #if 1
 void SugiyamaAnalysis::x_coordinate_assignment() {
     xs_ = make_x_coords(g, node_layers_, layers_, orders_, widths_,
-                        is_top_bottom_, is_inner_, start_x_offset_,
+                        is_top_bottom_, is_dummy_, start_x_offset_,
                         end_x_offset_);
 }
 

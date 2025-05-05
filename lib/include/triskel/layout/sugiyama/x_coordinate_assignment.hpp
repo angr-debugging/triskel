@@ -12,7 +12,7 @@ auto make_x_coords(const IGraph& g,
                    const NodeAttribute<size_t>& order,
                    const NodeAttribute<float>& widths,
                    const NodeAttribute<bool>& is_top_bottom,
-                   const EdgeAttribute<bool>& is_dummy,
+                   const NodeAttribute<bool>& is_dummy,
                    const EdgeAttribute<float>& start_x_offset,
                    const EdgeAttribute<float>& end_x_offset)
     -> NodeAttribute<float>;

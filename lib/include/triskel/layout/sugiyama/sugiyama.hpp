@@ -101,6 +101,9 @@ struct SugiyamaAnalysis : public ILayout {
     /// @brief Nodes that were created in Sugiyama
     std::vector<const Node*> dummy_nodes_;
 
+    /// @brief Is a node a dummy node
+    NodeAttribute<bool> is_dummy_;
+
     /// @brief The nodes on a given layer
     std::vector<std::vector<const Node*>> node_layers_;
     void init_node_layers();
