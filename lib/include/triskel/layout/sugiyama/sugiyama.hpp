@@ -220,6 +220,9 @@ struct SugiyamaAnalysis : public ILayout {
 
     void set_layer(const Node* node, size_t layer);
 
+    /// @brief Gets the order of the first / last dummy node of a long edge
+    auto get_long_edge_order(const Node* node, const Node* dummy) -> size_t;
+
     /// @brief Creates waypoints to draw the edges connecting nodes
     void waypoint_creation();
 

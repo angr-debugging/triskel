@@ -213,7 +213,6 @@ struct FSHCA {
                     const auto* um   = edge->from;
 
                     if (!marked_[edge] && (r < order_[um] || r == -1)) {
-                        fmt::print("Aligning {} with {}\n", *node, *um);
                         aligns_[um]   = node;
                         roots_[node]  = roots_[um];
                         aligns_[node] = roots_[node];

@@ -3,6 +3,7 @@
 #include "triskel/layout/sugiyama/layer_assignement.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -760,6 +761,22 @@ auto SugiyamaAnalysis::get_waypoints(EdgeId edge) const
     return waypoints_.get(edge);
 }
 
+auto SugiyamaAnalysis::get_long_edge_order(const Node* node, const Node* dummy)
+    -> size_t {
+    std::array<const Node*, 2> neighbors;
+    if (dummy->children_count() == 0) {
+        assert(dummy->parent_count() == 2);
+        neighbors[0] = dummy->parent_edges()[0]->from;
+        neighbors[1] = dummy->parent_edges()[1]->from;
+    } else {
+        assert(dummy->children_count() == 2);
+        neighbors[0] = dummy->child_edges()[0]->to;
+        neighbors[1] = dummy->child_edges()[1]->to;
+    }
+
+    return neighbors[0] == node ? orders_[neighbors[1]] : orders_[neighbors[0]];
+}
+
 // TODO: it's kind of odd that the xs are offsets and ys are coords
 void SugiyamaAnalysis::waypoint_creation() {
     for (const auto* edge : g.edges()) {
@@ -785,6 +802,8 @@ void SugiyamaAnalysis::waypoint_creation() {
             std::ranges::sort(edges, [&](const Edge* a, const Edge* b) {
                 auto order_a = orders_[a->to];
                 auto order_b = orders_[b->to];
+
+                // TODO: backedge
 
                 if (order_a == order_b) {
                     return end_x_offset_[a] < end_x_offset_[b];
@@ -831,15 +850,36 @@ void SugiyamaAnalysis::waypoint_creation() {
 
         // ENTRY EDGES
         for (const auto* node : nodes) {
-            // FIXME: vector
             auto edges = span_to_vec(node->parent_edges());
-            std::ranges::sort(edges, [&](const Edge* a, const Edge* b) {
-                auto order_a = orders_[a->from];
-                auto order_b = orders_[b->from];
+            std::ranges::sort(edges, [&, this](const Edge* a, const Edge* b) {
+                const auto order_a = orders_[a->from];
+                const auto order_b = orders_[b->from];
 
-                // TODO: lexicographic comparison to account for back edges
-                // For this I need to know if it's coming from the left or
-                // right...
+                {  // Backedge logic
+                    const auto order = orders_[node];
+
+                    if (is_top_bottom_[a->from]) {
+                        const auto order_a = get_long_edge_order(node, a->from);
+
+                        if (is_top_bottom_[b->from]) {
+                            const auto order_b =
+                                get_long_edge_order(node, b->from);
+
+                            if (order_a < order) {
+                                return (order_b > order) || (order_b < order_a);
+                            }
+
+                            return (order_b > order && order_b < order_a);
+                        }
+
+                        return order_a < order;
+                    }
+
+                    if (is_top_bottom_[b->from]) {
+                        const auto order_b = get_long_edge_order(node, b->from);
+                        return order < order_b;
+                    }
+                }
 
                 if (order_a == order_b) {
                     return start_x_offset_[a] < start_x_offset_[b];
@@ -879,10 +919,6 @@ void SugiyamaAnalysis::waypoint_creation() {
         }
     }
 }
-
-// Consider edges are overlapping if they are too close
-// This works well, but also doubles the amount of crossings
-float TOLERANCE = 10.0F;
 
 // Use dynamic programming to determine edge heights
 //
@@ -948,7 +984,7 @@ auto SugiyamaAnalysis::get_waypoint_y(size_t id,
         auto other_start = std::min(waypoints_other[1].x, waypoints_other[2].x);
         auto other_end   = std::max(waypoints_other[1].x, waypoints_other[2].x);
 
-        if (other_start - TOLERANCE <= x2 && x2 <= other_end + TOLERANCE) {
+        if (other_start < x2 && x2 < other_end) {
             auto l = get_waypoint_y(i, edges, layers);
 
             if (l == std::numeric_limits<int64_t>::max()) {
@@ -969,7 +1005,7 @@ auto SugiyamaAnalysis::get_waypoint_y(size_t id,
             lmin = std::min(l - 1, lmin);
         }
 
-        else if (other_start - TOLERANCE <= x1 && x1 <= other_end + TOLERANCE) {
+        else if (other_start < x1 && x1 < other_end) {
             // We don't want to perform a recursive call
             auto l = layers[i];
 
