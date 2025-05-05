@@ -124,6 +124,7 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
       ys_(g, 0.0F),
       inner_edges_(g, {}),
       is_flipped_(g, false),
+      is_top_bottom_(g, false),
       edge_weights_(g, 1.0F),
       priorities_(g, 0),
       entries(entries),
@@ -462,7 +463,8 @@ void SugiyamaAnalysis::remove_long_edges() {
             auto* new_edge = make_inner_edge(waypoint, previous_point);
             inner_edges.push_back(new_edge);
             if (is_going_up && (layer == bottom_layer + 1)) {
-                edge_weights_[new_edge] = 0;
+                edge_weights_[new_edge]  = 0;
+                is_top_bottom_[waypoint] = true;
             }
 
             previous_point = waypoint;
@@ -471,7 +473,8 @@ void SugiyamaAnalysis::remove_long_edges() {
         auto* new_edge = make_inner_edge(top, previous_point);
         inner_edges.push_back(new_edge);
         if (is_going_up) {
-            edge_weights_[new_edge] = 0;
+            edge_weights_[new_edge]        = 0;
+            is_top_bottom_[previous_point] = true;
         }
 
         // TODO: I can just say these edges are flipped and remove a lot of
@@ -692,8 +695,9 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
 
 #if 1
 void SugiyamaAnalysis::x_coordinate_assignment() {
-    xs_ = make_x_coords(g, node_layers_, layers_, orders_, widths_, is_inner_,
-                        start_x_offset_, end_x_offset_);
+    xs_ = make_x_coords(g, node_layers_, layers_, orders_, widths_,
+                        is_top_bottom_, is_inner_, start_x_offset_,
+                        end_x_offset_);
 }
 
 #else

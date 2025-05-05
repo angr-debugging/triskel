@@ -27,6 +27,7 @@ struct FSHCA {
           const NodeAttribute<size_t>& layer,
           const NodeAttribute<size_t>& order,
           const NodeAttribute<float>& widths,
+          const NodeAttribute<bool>& is_top_bottom,
           const EdgeAttribute<bool>& is_dummy,
           const EdgeAttribute<float>& start_x_offset,
           const EdgeAttribute<float>& end_x_offset)
@@ -37,6 +38,7 @@ struct FSHCA {
           layer_{layer},
           order_{order},
           widths_(widths),
+          is_top_bottom_{is_top_bottom},
           is_dummy_{is_dummy},
           start_x_offset_(start_x_offset),
           end_x_offset_(end_x_offset),
@@ -55,18 +57,6 @@ struct FSHCA {
           drift_(g, 0)
 
     {
-        // for (const auto& layer : layers) {
-        //     for (const auto* node : layer) {
-        //         assert(layers_[layer_[node]][order_[node]] == node);
-        //         fmt::print("({}, {}, {}), ", *node, order_[node],
-        //         layer_[node]);
-        //     }
-
-        //     fmt::print("\n");
-        // }
-
-        // fmt::print("{}", g);
-
         for (const auto* node : g_.nodes()) {
             aligns_[node] = node;
             roots_[node]  = node;
@@ -79,7 +69,7 @@ struct FSHCA {
         compact();
     }
 
-    int64_t delta = 400;
+    int64_t delta = 50;
     NodeAttribute<float> xs_;
 
    private:
@@ -114,6 +104,7 @@ struct FSHCA {
     NodeAttribute<Node*> sinks_;
     NodeAttribute<int64_t> shifts_;
     NodeAttribute<float> widths_;
+    NodeAttribute<bool> is_top_bottom_;
     NodeAttribute<bool> was_placed_;
 
     [[nodiscard]] auto get_layer_size(size_t i) const -> size_t {
@@ -136,34 +127,43 @@ struct FSHCA {
     }
 
     auto preprocessing() -> void {
-        for (size_t i = 0; i < layers_.size() - 1; ++i) {
+        for (size_t layer_idx = 1; layer_idx < layers_.size(); ++layer_idx) {
             size_t k0 = 0;
             size_t l  = 0;
 
-            const auto& layer = layers_[i + 1];
+            const auto& layer = layers_[layer_idx];
 
-            for (size_t l1 = 0; l1 < get_layer_size(i + 1); ++l1) {
+            for (size_t l1 = 0; l1 < get_layer_size(layer_idx); ++l1) {
                 const auto* node = layer[l1];
-                auto incident    = is_incident(node);
 
-                if (l1 == get_layer_size(i + 1) - 1 || incident.has_value()) {
-                    size_t k1 = get_layer_size(i);
+                auto incident = is_incident(node);
+
+                if (l1 == get_layer_size(layer_idx) - 1 ||
+                    incident.has_value()) {
+                    size_t k1 = get_layer_size(layer_idx - 1);
 
                     if (incident.has_value()) {
                         k1 = incident.value();
                     }
 
+                    /// @brief The leftmost node can't intersect on the left
+                    bool can_intersect_left = false;
+
                     for (; l <= l1; ++l) {
                         const auto* node = layer[l];
+
                         for (const auto* edge : node->parent_edges()) {
                             const auto* vk = edge->from;
 
                             const auto k = order_[vk];
 
-                            if (k < k0 || (k > k1 && l != l1)) {
+                            if ((can_intersect_left && k < k0) ||
+                                (k > k1 && l != l1)) {
                                 marked_[edge] = true;
                             }
                         }
+
+                        can_intersect_left = true;
                     }
 
                     k0 = k1;
@@ -179,6 +179,13 @@ struct FSHCA {
 
             for (const auto* node : layer) {
                 auto neighbors = span_to_vec(node->parent_edges());
+
+                neighbors = std::ranges::views::filter(
+                                neighbors,
+                                [this](const Edge* n) {
+                                    return !is_top_bottom_[n->from];
+                                }) |
+                            std::ranges::to<std::vector<Edge*>>();
 
                 std::ranges::sort(neighbors,
                                   [this](const Edge* a, const Edge* b) -> bool {
@@ -206,6 +213,7 @@ struct FSHCA {
                     const auto* um   = edge->from;
 
                     if (!marked_[edge] && (r < order_[um] || r == -1)) {
+                        fmt::print("Aligning {} with {}\n", *node, *um);
                         aligns_[um]   = node;
                         roots_[node]  = roots_[um];
                         aligns_[node] = roots_[node];
@@ -218,13 +226,29 @@ struct FSHCA {
         }
     };
 
+    /// @brief returns the x coordinate of a node with drift taken into account
+    auto drifted_x(const Node* node) { return xs_[node] + drift_[node]; }
+
     auto set_x(const Node* node, int64_t x) -> void {
         was_placed_[node] = true;
         xs_[node]         = x;
     }
 
+    /// @brief Finds the first predecessor of a node that isn't a top down node
     [[nodiscard]] auto pred(const Node* node) const -> const Node* {
-        return layers_[layer_[node]][order_[node] - 1];
+        const auto& layer = layers_[layer_[node]];
+        auto order        = order_[node];
+
+        while (order > 0) {
+            order -= 1;
+
+            const auto* node = layer[order];
+            if (!is_top_bottom_[node]) {
+                return node;
+            }
+        }
+
+        return nullptr;
     }
 
     // NOLINTNEXTLINE(misc-no-recursion)
@@ -237,21 +261,24 @@ struct FSHCA {
         const auto* w = node;
 
         do {
-            if (order_[w] > 0) {
-                const auto* u = roots_[pred(w)];
+            const auto* p = pred(w);
+            if (p != nullptr) {
+                const auto* u = roots_[p];
                 place_block(u);
 
                 if (sinks_[node] == node) {
                     sinks_[node] = sinks_[u];
                 }
 
-                // TODO: add block width somewhere here
                 if (sinks_[node] != sinks_[u]) {
+                    // TODO: add block width somewhere here
                     shifts_[sinks_[u]] = std::min(
                         shifts_[sinks_[u]],
-                        static_cast<int64_t>(xs_[node] - xs_[u] - delta));
+                        static_cast<int64_t>(xs_[node] + drift_[w] - xs_[u] -
+                                             delta - drift_[p] - widths_[p]));
                 } else {
-                    xs_[node] = std::max(xs_[node], xs_[u] + delta);
+                    xs_[node] = std::max(xs_[node], xs_[u] + delta + drift_[p] +
+                                                        widths_[p] - drift_[w]);
                 }
             }
 
@@ -271,10 +298,10 @@ struct FSHCA {
         }
 
         for (const auto& node : g_.nodes()) {
-            xs_[node]        = xs_[roots_[node]];
+            xs_[node]        = xs_[roots_[node]] + drift_[node];
             const auto shift = shifts_[sinks_[roots_[node]]];
             if (shift < std::numeric_limits<int64_t>::max()) {
-                xs_[node] += shifts_[sinks_[roots_[node]]];  //  + drift_[node];
+                xs_[node] += shifts_[sinks_[roots_[node]]];
             }
         }
     }
@@ -287,12 +314,13 @@ auto triskel::make_x_coords(const IGraph& g,
                             const NodeAttribute<size_t>& layer,
                             const NodeAttribute<size_t>& order,
                             const NodeAttribute<float>& widths,
+                            const NodeAttribute<bool>& is_top_bottom,
                             const EdgeAttribute<bool>& is_dummy,
                             const EdgeAttribute<float>& start_x_offset,
                             const EdgeAttribute<float>& end_x_offset)
     -> NodeAttribute<float> {
-    auto ctx = FSHCA(g, layers, layer, order, widths, is_dummy, start_x_offset,
-                     end_x_offset);
+    auto ctx = FSHCA(g, layers, layer, order, widths, is_top_bottom, is_dummy,
+                     start_x_offset, end_x_offset);
 
     return ctx.xs_;
 }

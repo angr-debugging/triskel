@@ -94,6 +94,10 @@ struct SugiyamaAnalysis : public ILayout {
     /// @brief Hack
     EdgeAttribute<bool> is_flipped_;
 
+    /// @brief Hacky, Is this a node at the top or bottom of a backedge. This is
+    /// a dummy node with no successor or no predecessor
+    NodeAttribute<bool> is_top_bottom_;
+
     /// @brief Nodes that were created in Sugiyama
     std::vector<const Node*> dummy_nodes_;
 
