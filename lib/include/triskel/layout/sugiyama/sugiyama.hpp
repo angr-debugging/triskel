@@ -229,9 +229,6 @@ struct SugiyamaAnalysis : public ILayout {
     /// @brief Translate edge waypoints after coordinate assignment
     void translate_waypoints();
 
-    /// @brief Calculates Y coordinates for waypoints
-    void calculate_waypoints_y();
-
     auto get_waypoint_y(size_t id,
                         const std::vector<const Edge*>& edges,
                         std::vector<int64_t>& layers) -> int64_t;

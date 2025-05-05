@@ -25,7 +25,6 @@
 #include "triskel/layout/sugiyama/vertex_ordering.hpp"
 #include "triskel/layout/sugiyama/x_coordinate_assignment.hpp"
 #include "triskel/utils/attribute.hpp"
-#include "triskel/utils/constants.hpp"
 #include "triskel/utils/generator.hpp"
 #include "triskel/utils/point.hpp"
 
@@ -152,8 +151,6 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
     ge.push();
     flip_edges();
 
-    y_coordinate_assignment();
-
     vertex_ordering();
 
     waypoint_creation();
@@ -162,7 +159,7 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
 
     translate_waypoints();
 
-    calculate_waypoints_y();
+    y_coordinate_assignment();
 
     height_ = compute_graph_height();
     width_  = compute_graph_width();
@@ -817,6 +814,8 @@ void SugiyamaAnalysis::waypoint_creation() {
             auto x = spacer;
 
             for (const auto* edge : edges) {
+                assert(layers_[edge->from] > layers_[edge->to]);
+
                 // Creates 4 waypoints (Xs):
                 // We calculate the x and y coordinates of the first 2 nodes
                 // And the y coordinate of the extremities
@@ -826,8 +825,6 @@ void SugiyamaAnalysis::waypoint_creation() {
                 //         |
                 //       __X__
                 //      |     |
-
-                assert(ys_[edge->to] > ys_[edge->from]);
 
                 auto& waypoints = waypoints_[edge];
 
@@ -840,9 +837,6 @@ void SugiyamaAnalysis::waypoint_creation() {
                     waypoints[0].x = start_x_offset_[edge];
                     waypoints[1].x = start_x_offset_[edge];
                 }
-
-                waypoints[0].y = y0;
-                waypoints[3].y = ys_[edge->to];
 
                 x += spacer;
             }
@@ -1030,8 +1024,11 @@ auto SugiyamaAnalysis::get_waypoint_y(size_t id,
     return layer;
 }
 
-void SugiyamaAnalysis::calculate_waypoints_y() {
-    for (size_t layer = 0; layer < layer_count_; ++layer) {
+void SugiyamaAnalysis::y_coordinate_assignment() {
+    auto y = 0.0F;
+
+    // The highest layer is on top
+    for (size_t layer = layer_count_ - 1; layer <= layer_count_; --layer) {
         // Sort the nodes by order
         auto edges = std::vector<const Edge*>{};
 
@@ -1052,14 +1049,32 @@ void SugiyamaAnalysis::calculate_waypoints_y() {
             min_layer  = std::min(layer, min_layer);
         }
 
+        float max_node_height = 0.0F;
+        for (const auto* node : node_layers_[layer]) {
+            ys_[node]              = y;
+            const auto node_height = heights_[node];
+            max_node_height        = std::max(max_node_height, node_height);
+
+            for (const auto* edge : node->parent_edges()) {
+                waypoints_[edge][3].y = y;
+            }
+
+            for (const auto* edge : node->child_edges()) {
+                waypoints_[edge][0].y = y + node_height;
+            }
+        }
+        y += max_node_height;
+        y += static_cast<float>(max_layer - min_layer) * settings.EDGE_HEIGHT;
+        y += 2.0F * settings.Y_GUTTER;
+
         for (size_t i = 0; i < edges.size(); ++i) {
             const auto* edge = edges[i];
             auto& waypoints  = waypoints_[edge];
 
-            waypoints[1].y = waypoints[3].y - settings.Y_GUTTER -
+            waypoints[1].y = y - settings.Y_GUTTER -
                              static_cast<float>(layers[i] - min_layer) *
                                  settings.EDGE_HEIGHT;
-            waypoints[2].y = waypoints[3].y - settings.Y_GUTTER -
+            waypoints[2].y = y - settings.Y_GUTTER -
                              static_cast<float>(layers[i] - min_layer) *
                                  settings.EDGE_HEIGHT;
         }
@@ -1086,34 +1101,6 @@ void SugiyamaAnalysis::flip_edges() {
         if (layers_[edge->from] < layers_[edge->to]) {
             ge.edit_edge(*edge, *edge->to, *edge->from);
         }
-    }
-}
-
-void SugiyamaAnalysis::y_coordinate_assignment() {
-    auto y = 0.0F;
-
-    // The highest layer is on top
-    for (size_t layer = layer_count_ - 1; layer <= layer_count_; --layer) {
-        // The height of the biggest node in this layer
-        auto layer_height = 0.0F;
-
-        // The space between this layer and the next
-        auto layer_gap = 2.0F * settings.Y_GUTTER;
-
-        auto nodes = node_layers_[layer];
-        for (const auto* node : nodes) {
-            ys_[node]    = y;
-            layer_height = std::max(layer_height, heights_[node]);
-            layer_gap += static_cast<float>(node->children_count()) *
-                         settings.EDGE_HEIGHT;
-        }
-
-        if (layer_gap == 2.0F * settings.Y_GUTTER) {
-            // No edges in this gap
-            layer_gap = 0.0F;
-        }
-
-        y += layer_height + layer_gap;
     }
 }
 
