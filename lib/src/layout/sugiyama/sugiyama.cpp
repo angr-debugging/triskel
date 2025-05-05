@@ -675,7 +675,7 @@ auto SugiyamaAnalysis::compute_graph_height() -> float {
 void SugiyamaAnalysis::x_coordinate_assignment() {
     xs_ = make_x_coords(g, node_layers_, layers_, orders_, widths_,
                         is_top_bottom_, is_dummy_, start_x_offset_,
-                        end_x_offset_);
+                        end_x_offset_, settings.X_GUTTER);
 }
 
 #else

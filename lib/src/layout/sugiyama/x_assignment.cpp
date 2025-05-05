@@ -36,7 +36,8 @@ struct FSHCA {
           const NodeAttribute<bool>& is_top_bottom,
           const NodeAttribute<bool>& is_dummy,
           const EdgeAttribute<float>& start_x_offset,
-          const EdgeAttribute<float>& end_x_offset)
+          const EdgeAttribute<float>& end_x_offset,
+          float delta)
         : xs_(g, 0.0F),
 
           g_(g),
@@ -62,7 +63,9 @@ struct FSHCA {
                   hdir == LR::LEFT ? std::numeric_limits<int64_t>::max()
                                    : std::numeric_limits<int64_t>::min()),
           was_placed_(g, false),
-          drift_(g, 0)
+          drift_(g, 0),
+
+          delta{delta}
 
     {
         for (const auto* node : g_.nodes()) {
@@ -77,7 +80,6 @@ struct FSHCA {
         compact();
     }
 
-    int64_t delta = 50;
     NodeAttribute<float> xs_;
 
    private:
@@ -114,6 +116,9 @@ struct FSHCA {
     NodeAttribute<float> widths_;
     NodeAttribute<bool> is_top_bottom_;
     NodeAttribute<bool> was_placed_;
+
+    // X gutter
+    float delta;
 
     [[nodiscard]] auto get_layer_size(size_t i) const -> size_t {
         return layers_[i].size();
@@ -432,23 +437,23 @@ auto triskel::make_x_coords(const IGraph& g,
                             const NodeAttribute<bool>& is_top_bottom,
                             const NodeAttribute<bool>& is_dummy,
                             const EdgeAttribute<float>& start_x_offset,
-                            const EdgeAttribute<float>& end_x_offset)
-    -> NodeAttribute<float> {
-    const auto tl =
-        FSHCA<TD::TOP, LR::LEFT>(g, layers, layer, order, widths, is_top_bottom,
-                                 is_dummy, start_x_offset, end_x_offset)
-            .xs_;
-    const auto tr = FSHCA<TD::TOP, LR::RIGHT>(g, layers, layer, order, widths,
-                                              is_top_bottom, is_dummy,
-                                              start_x_offset, end_x_offset)
+                            const EdgeAttribute<float>& end_x_offset,
+                            const float x_gutter) -> NodeAttribute<float> {
+    const auto tl = FSHCA<TD::TOP, LR::LEFT>(
+                        g, layers, layer, order, widths, is_top_bottom,
+                        is_dummy, start_x_offset, end_x_offset, x_gutter)
                         .xs_;
-    const auto dl = FSHCA<TD::DOWN, LR::LEFT>(g, layers, layer, order, widths,
-                                              is_top_bottom, is_dummy,
-                                              start_x_offset, end_x_offset)
+    const auto tr = FSHCA<TD::TOP, LR::RIGHT>(
+                        g, layers, layer, order, widths, is_top_bottom,
+                        is_dummy, start_x_offset, end_x_offset, x_gutter)
                         .xs_;
-    const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(g, layers, layer, order, widths,
-                                               is_top_bottom, is_dummy,
-                                               start_x_offset, end_x_offset)
+    const auto dl = FSHCA<TD::DOWN, LR::LEFT>(
+                        g, layers, layer, order, widths, is_top_bottom,
+                        is_dummy, start_x_offset, end_x_offset, x_gutter)
+                        .xs_;
+    const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(
+                        g, layers, layer, order, widths, is_top_bottom,
+                        is_dummy, start_x_offset, end_x_offset, x_gutter)
                         .xs_;
 
     NodeAttribute<float> xs{g, 0.0F};

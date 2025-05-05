@@ -14,6 +14,6 @@ auto make_x_coords(const IGraph& g,
                    const NodeAttribute<bool>& is_top_bottom,
                    const NodeAttribute<bool>& is_dummy,
                    const EdgeAttribute<float>& start_x_offset,
-                   const EdgeAttribute<float>& end_x_offset)
-    -> NodeAttribute<float>;
+                   const EdgeAttribute<float>& end_x_offset,
+                   float x_gutter) -> NodeAttribute<float>;
 }  // namespace triskel
