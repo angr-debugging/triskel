@@ -126,8 +126,8 @@ struct CFGLayout {
     [[nodiscard]] virtual auto get_node_width(size_t node) const -> float = 0;
 
     /// @brief Returns the waypoints that the edge `edge` should follow
-    [[nodiscard]] virtual auto get_waypoints(size_t edge) const
-        -> const std::vector<Point>& = 0;
+    // NOLINTNEXTLINE(modernize-*) Needed for Java bindings
+    virtual std::vector<Point> const& get_waypoints(size_t edge) const = 0;
 
     /// @brief Returns the height of the graph
     [[nodiscard]] virtual auto get_height() const -> float = 0;
@@ -148,6 +148,10 @@ struct CFGLayout {
     /// @param path the path where the render will be saved
     virtual void render_and_save(ExportingRenderer& renderer,
                                  const std::filesystem::path& path) const = 0;
+
+    // Needed for Java bindings
+    virtual void render_and_save(ExportingRenderer& renderer,
+                                 const std::string& path) const = 0;
 };
 
 struct LayoutBuilder {

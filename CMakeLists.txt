@@ -19,7 +19,8 @@ option(ENABLE_LINTING   "Linting"                                               
 option(ENABLE_TESTING   "Tests"                                                         OFF)
 
 cmake_dependent_option(BUILD_WASM      "Builds to wasm"                            OFF  "NOT ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
-cmake_dependent_option(BUILD_BINDINGS  "Builds the python bindings"                OFF "ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
+cmake_dependent_option(BUILD_PYTHON_BINDINGS  "Builds the python bindings"         OFF "ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
+cmake_dependent_option(BUILD_JAVA_BINDINGS    "Builds the java bindings"           OFF "ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
 cmake_dependent_option(BUILD_BENCH     "Builds the binary used for benchmarking"   OFF "ENABLE_LLVM" OFF)
 cmake_dependent_option(BUILD_GUI       "Builds the gui binary"                     OFF "ENABLE_LLVM; ENABLE_IMGUI" OFF)
 cmake_dependent_option(BUILD_IMG       "Builds the img binary"                     OFF "ENABLE_LLVM; ENABLE_CAIRO" OFF)
@@ -92,10 +93,9 @@ if (ENABLE_IMGUI)
     find_package(GLEW REQUIRED)
 endif()
 
-if(BUILD_BINDINGS)
-    message(STATUS "Building bindings")
-    add_subdirectory(bindings)
-endif()
+
+message(STATUS "Building bindings")
+add_subdirectory(bindings)
 
 add_subdirectory(bin)
 add_subdirectory(lib)
