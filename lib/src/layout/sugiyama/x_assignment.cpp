@@ -358,11 +358,10 @@ struct FSHCA {
                         static_cast<int64_t>(xs_[node] + drift_[w] - xs_[u] -
                                              delta - drift_[p] - widths_[p]));
                 } else {
-                    shifts_[sinks_[u]] =
-                        std::max(shifts_[sinks_[u]],
-                                 static_cast<int64_t>(xs_[node] + drift_[w] +
-                                                      widths_[w] + xs_[u] +
-                                                      delta - drift_[p]));
+                    shifts_[sinks_[u]] = std::min(
+                        shifts_[sinks_[u]],
+                        static_cast<int64_t>(xs_[u] + drift_[p] - xs_[node] -
+                                             drift_[w] + widths_[w] + delta));
                 }
             } else {
                 if (hdir == LR::LEFT) {
@@ -400,15 +399,11 @@ struct FSHCA {
                 xs_[node] += shifts_[sinks_[roots_[node]]];
             }
 
-            if (hdir == LR::RIGHT) {
-                min_x = std::min(xs_[node], 0.0F);
-            }
+            min_x = std::min(xs_[node], 0.0F);
         }
 
-        if (hdir == LR::RIGHT) {
-            for (const auto& node : g_.nodes()) {
-                xs_[node] -= min_x;
-            }
+        for (const auto& node : g_.nodes()) {
+            xs_[node] -= min_x;
         }
     }
 };
@@ -443,25 +438,26 @@ auto triskel::make_x_coords(const IGraph& g,
                         g, layers, layer, order, widths, is_top_bottom,
                         is_dummy, start_x_offset, end_x_offset, x_gutter)
                         .xs_;
-    // const auto tr = FSHCA<TD::TOP, LR::RIGHT>(
-    //                     g, layers, layer, order, widths, is_top_bottom,
-    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
-    //                     .xs_;
-    // const auto dl = FSHCA<TD::DOWN, LR::LEFT>(
-    //                     g, layers, layer, order, widths, is_top_bottom,
-    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
-    //                     .xs_;
-    // const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(
-    //                     g, layers, layer, order, widths, is_top_bottom,
-    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
-    //                     .xs_;
+    const auto tr = FSHCA<TD::TOP, LR::RIGHT>(
+                        g, layers, layer, order, widths, is_top_bottom,
+                        is_dummy, start_x_offset, end_x_offset, x_gutter)
+                        .xs_;
+    const auto dl = FSHCA<TD::DOWN, LR::LEFT>(
+                        g, layers, layer, order, widths, is_top_bottom,
+                        is_dummy, start_x_offset, end_x_offset, x_gutter)
+                        .xs_;
+    const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(
+                        g, layers, layer, order, widths, is_top_bottom,
+                        is_dummy, start_x_offset, end_x_offset, x_gutter)
+                        .xs_;
 
-    // NodeAttribute<float> xs{g, 0.0F};
+    NodeAttribute<float> xs{g, 0.0F};
 
-    // for (const auto& node : g.nodes()) {
-    //     auto x = std::array<float, 4>{tl[node], tr[node], dl[node],
-    //     dr[node]}; sort4(x); xs[node] = (x[1] + x[2]) / 2;
-    // }
+    for (const auto& node : g.nodes()) {
+        auto x = std::array<float, 4>{tl[node], tr[node], dl[node], dr[node]};
+        sort4(x);
+        xs[node] = (x[1] + x[2]) / 2;
+    }
 
-    return tl;
+    return xs;
 }
