@@ -86,6 +86,9 @@ struct ImGuiRendererImpl : public ImguiRenderer {
 
     void End() override { canvas_.End(); }
 
+    void Suspend() override { canvas_.Suspend(); }
+    void Resume() override { canvas_.Resume(); }
+
     void draw_line(Point start, Point end, const StrokeStyle& style) override {
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
 

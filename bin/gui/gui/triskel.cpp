@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 
 #include <fmt/format.h>
 #include <imgui.h>
@@ -101,6 +102,19 @@ void Triskel::OnFrame(float /*deltaTime*/) {
     if (layout_ != nullptr) {
         imgui_renderer_->Begin("##main_graph", {s_RightPaneSize, 0.0F});
         layout_->render(*imgui_renderer_);
+
+        for (size_t i = 0; i < layout_->node_count(); ++i) {
+            const auto tl     = layout_->get_coords(i);
+            const auto width  = layout_->get_width(i);
+            const auto height = layout_->get_height(i);
+
+            if (ImGui::IsMouseHoveringRect(
+                    ImVec2{tl.x, tl.y}, ImVec2{tl.x + width, tl.y + height})) {
+                imgui_renderer_->Suspend();
+                ImGui::SetTooltip("%s", fmt::format("Node: {}", i).c_str());
+                imgui_renderer_->Resume();
+            }
+        }
         imgui_renderer_->End();
     } else {
         DrawLogo();

@@ -1053,10 +1053,12 @@ void SugiyamaAnalysis::y_coordinate_assignment() {
 
             waypoints[1].y = y - settings.Y_GUTTER -
                              static_cast<float>(layers[i] - min_layer) *
-                                 settings.EDGE_HEIGHT;
+                                 settings.EDGE_HEIGHT +
+                             settings.EDGE_HEIGHT / 2;
             waypoints[2].y = y - settings.Y_GUTTER -
                              static_cast<float>(layers[i] - min_layer) *
-                                 settings.EDGE_HEIGHT;
+                                 settings.EDGE_HEIGHT +
+                             settings.EDGE_HEIGHT / 2;
         }
     }
 }

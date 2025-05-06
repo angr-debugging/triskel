@@ -443,26 +443,25 @@ auto triskel::make_x_coords(const IGraph& g,
                         g, layers, layer, order, widths, is_top_bottom,
                         is_dummy, start_x_offset, end_x_offset, x_gutter)
                         .xs_;
-    const auto tr = FSHCA<TD::TOP, LR::RIGHT>(
-                        g, layers, layer, order, widths, is_top_bottom,
-                        is_dummy, start_x_offset, end_x_offset, x_gutter)
-                        .xs_;
-    const auto dl = FSHCA<TD::DOWN, LR::LEFT>(
-                        g, layers, layer, order, widths, is_top_bottom,
-                        is_dummy, start_x_offset, end_x_offset, x_gutter)
-                        .xs_;
-    const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(
-                        g, layers, layer, order, widths, is_top_bottom,
-                        is_dummy, start_x_offset, end_x_offset, x_gutter)
-                        .xs_;
+    // const auto tr = FSHCA<TD::TOP, LR::RIGHT>(
+    //                     g, layers, layer, order, widths, is_top_bottom,
+    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
+    //                     .xs_;
+    // const auto dl = FSHCA<TD::DOWN, LR::LEFT>(
+    //                     g, layers, layer, order, widths, is_top_bottom,
+    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
+    //                     .xs_;
+    // const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(
+    //                     g, layers, layer, order, widths, is_top_bottom,
+    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
+    //                     .xs_;
 
-    NodeAttribute<float> xs{g, 0.0F};
+    // NodeAttribute<float> xs{g, 0.0F};
 
-    for (const auto& node : g.nodes()) {
-        auto x = std::array<float, 4>{tl[node], tr[node], dl[node], dr[node]};
-        sort4(x);
-        xs[node] = (x[1] + x[2]) / 2;
-    }
+    // for (const auto& node : g.nodes()) {
+    //     auto x = std::array<float, 4>{tl[node], tr[node], dl[node],
+    //     dr[node]}; sort4(x); xs[node] = (x[1] + x[2]) / 2;
+    // }
 
-    return xs;
+    return tl;
 }

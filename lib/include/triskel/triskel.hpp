@@ -119,6 +119,12 @@ struct CFGLayout {
     /// block
     [[nodiscard]] virtual auto get_coords(size_t node) const -> Point = 0;
 
+    /// @brief Returns the height of a node
+    [[nodiscard]] virtual auto get_height(size_t node) const -> float = 0;
+
+    /// @brief Returns the width of a node
+    [[nodiscard]] virtual auto get_width(size_t node) const -> float = 0;
+
     /// @brief Returns the waypoints that the edge `edge` should follow
     [[nodiscard]] virtual auto get_waypoints(size_t edge) const
         -> const std::vector<Point>& = 0;
@@ -243,6 +249,12 @@ struct ImguiRenderer : Renderer {
 
     /// @brief Resize and center the canvas to the given dimensions
     virtual void fit(float width, float height) = 0;
+
+    /// @brief Pauses the canvas
+    virtual void Suspend() = 0;
+
+    /// @brief Resumes the canvas
+    virtual void Resume() = 0;
 };
 
 /// @brief Builds a renderer to draw CFGs in Dear ImGui
