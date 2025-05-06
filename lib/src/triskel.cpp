@@ -80,11 +80,13 @@ struct CFGLayoutImpl : CFGLayout {
         return layout_.get_waypoints(id);
     }
 
-    [[nodiscard]] auto get_height(const size_t node) const -> float override {
+    [[nodiscard]] auto get_node_height(const size_t node) const
+        -> float override {
         return layout_.get_height(get_node_id(*graph_, node));
     }
 
-    [[nodiscard]] auto get_width(const size_t node) const -> float override {
+    [[nodiscard]] auto get_node_width(const size_t node) const
+        -> float override {
         return layout_.get_width(get_node_id(*graph_, node));
     }
 

@@ -120,10 +120,10 @@ struct CFGLayout {
     [[nodiscard]] virtual auto get_coords(size_t node) const -> Point = 0;
 
     /// @brief Returns the height of a node
-    [[nodiscard]] virtual auto get_height(size_t node) const -> float = 0;
+    [[nodiscard]] virtual auto get_node_height(size_t node) const -> float = 0;
 
     /// @brief Returns the width of a node
-    [[nodiscard]] virtual auto get_width(size_t node) const -> float = 0;
+    [[nodiscard]] virtual auto get_node_width(size_t node) const -> float = 0;
 
     /// @brief Returns the waypoints that the edge `edge` should follow
     [[nodiscard]] virtual auto get_waypoints(size_t edge) const

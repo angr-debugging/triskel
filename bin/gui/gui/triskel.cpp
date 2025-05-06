@@ -105,8 +105,8 @@ void Triskel::OnFrame(float /*deltaTime*/) {
 
         for (size_t i = 0; i < layout_->node_count(); ++i) {
             const auto tl     = layout_->get_coords(i);
-            const auto width  = layout_->get_width(i);
-            const auto height = layout_->get_height(i);
+            const auto width  = layout_->get_node_width(i);
+            const auto height = layout_->get_node_height(i);
 
             if (ImGui::IsMouseHoveringRect(
                     ImVec2{tl.x, tl.y}, ImVec2{tl.x + width, tl.y + height})) {

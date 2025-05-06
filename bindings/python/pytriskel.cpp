@@ -13,9 +13,9 @@ using EdgeType = triskel::LayoutBuilder::EdgeType;
 
 PYBIND11_MODULE(pytriskel, m) {
     py::enum_<EdgeType>(m, "EdgeType")
-        .value("Default", EdgeType::Default)
-        .value("T", EdgeType::True)
-        .value("F", EdgeType::False)
+        .value("EdgeTypeDefault", EdgeType::Default)
+        .value("EdgeTypeTrue", EdgeType::True)
+        .value("EdgeTypeFalse", EdgeType::False)
         .export_values();
 
     py::class_<triskel::Renderer> Renderer(m, "Renderer");
@@ -24,7 +24,7 @@ PYBIND11_MODULE(pytriskel, m) {
         m, "ExportingRenderer");
 
     py::class_<triskel::Point>(m, "Point")
-        .def(py::init<size_t, size_t>())
+        .def(py::init<float, float>())
         .def_readwrite("x", &triskel::Point::x)
         .def_readwrite("y", &triskel::Point::y);
 
@@ -33,6 +33,10 @@ PYBIND11_MODULE(pytriskel, m) {
              "Gets the x and y coordinate of a node")
         .def("get_waypoints", &triskel::CFGLayout::get_waypoints,
              "Gets the waypoints of an edge")
+        .def("get_node_height", &triskel::CFGLayout::get_node_height,
+             "Gets height of a node")
+        .def("get_node_width", &triskel::CFGLayout::get_node_width,
+             "Gets width of a node")
         .def("get_height", &triskel::CFGLayout::get_height,
              "Gets height of the graph")
         .def("get_width", &triskel::CFGLayout::get_width,
