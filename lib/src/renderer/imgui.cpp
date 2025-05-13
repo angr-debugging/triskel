@@ -1,4 +1,6 @@
+#include <fmt/base.h>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -14,7 +16,13 @@ using namespace triskel;
 
 namespace {
 
+auto square(const auto& x) {
+    return x * x;
+}
+
 struct ImGuiRendererImpl : public ImguiRenderer {
+    double scale_ = 1.0;
+
     ImGuiRendererImpl() {
         STYLE_BASICBLOCK_BORDER = {.thickness = 3.0F, .color = Black};
         STYLE_EDGE              = {.thickness = 2.0F, .color = Black};
@@ -46,20 +54,18 @@ struct ImGuiRendererImpl : public ImguiRenderer {
         auto view_origin = canvas_.ViewOrigin();
 
         if (ImGui::IsItemHovered() && (io.MouseWheel != 0)) {
-            auto scale = view_scale;
-            if (view_scale > 1) {
-                scale += io.MouseWheel;
-            } else {
-                if (io.MouseWheel > 0) {
-                    scale *= 2;
-                } else {
-                    scale /= 2;
-                }
-            }
+            const auto newScale =
+                std::min(std::max(scale_ + (io.MouseWheel * 0.05), 0.01), 1.0);
 
-            // TODO: clamp zoom
-            // TODO: zoom not to corner
-            canvas_.SetView((view_origin / view_scale * scale), scale);
+            const auto mousePos = ImGui::GetMousePos() * view_scale;
+
+            const auto scaleRatio = square(newScale / scale_);
+
+            canvas_.SetView(mousePos + view_origin -
+                                ImGui::GetMousePos() * square(newScale),
+                            square(newScale));
+
+            scale_ = newScale;
         }
     }
 
@@ -197,6 +203,7 @@ struct ImGuiRendererImpl : public ImguiRenderer {
         canvas_.SetView(view_origin, view_scale);
 
         canvas_.CenterView(ImVec2{width / 2, height / 2});
+        scale_ = sqrt(canvas_.ViewScale());
     }
 
     ImGuiEx::Canvas canvas_;
