@@ -150,8 +150,8 @@ struct CFGLayout {
                                  const std::filesystem::path& path) const = 0;
 
     // Needed for Java bindings
-    virtual void render_and_save(ExportingRenderer& renderer,
-                                 const std::string& path) const = 0;
+    virtual void render_and_save_s(ExportingRenderer& renderer,
+                                   const std::string& path) const = 0;
 };
 
 struct LayoutBuilder {

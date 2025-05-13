@@ -196,6 +196,112 @@ SugiyamaAnalysis::SugiyamaAnalysis(IGraph& g,
         // waypoints.erase(waypoints.end() - 4);
         // waypoints.erase(waypoints.end() - 4);
     }
+
+    // Normalize the graph
+    remove_extra_waypoints();
+
+    float min_x = std::numeric_limits<float>::max();
+    float min_y = std::numeric_limits<float>::max();
+
+    float max_x = std::numeric_limits<float>::min();
+    float max_y = std::numeric_limits<float>::min();
+
+    for (const auto* node : g.nodes()) {
+        min_x = std::min(min_x, xs_[node]);
+        min_y = std::min(min_y, ys_[node]);
+
+        max_x = std::max(max_x, xs_[node]);
+        max_y = std::max(max_y, ys_[node]);
+    }
+
+    for (const auto* edge : g.edges()) {
+        for (const auto& point : waypoints_[edge]) {
+            min_x = std::min(min_x, point.x);
+            min_y = std::min(min_y, point.y);
+
+            max_x = std::max(max_x, point.x);
+            max_y = std::max(max_y, point.y);
+        }
+    }
+
+    for (const auto& io : io_waypoints_) {
+        for (const auto& point : io.second) {
+            min_x = std::min(min_x, point.x);
+            min_y = std::min(min_y, point.y);
+
+            max_x = std::max(max_x, point.x);
+            max_y = std::max(max_y, point.y);
+        }
+    }
+
+    if (min_x != 0 || min_y != 0) {
+        translate_layout(-min_x, -min_y);
+    }
+
+    width_  = max_y - min_y;
+    height_ = max_y - min_y;
+}
+
+namespace {
+auto simplify_vertices(const std::vector<Point>& waypoints)
+    -> std::vector<Point> {
+    if (waypoints.size() <= 2) {
+        return waypoints;
+    }
+
+    std::vector<Point> res;
+    res.reserve(waypoints.size());
+
+    res.push_back(waypoints[0]);
+    res.push_back(waypoints[1]);
+
+    for (size_t i = 2; i < waypoints.size(); ++i) {
+        const auto& point = waypoints[i];
+
+        const auto l        = res.size();
+        const auto& gparent = res[l - 2];
+        const auto& parent  = res[l - 1];
+
+        if ((point.x == gparent.x && point.x == parent.x) ||
+            (point.y == gparent.y && point.y == parent.y)) {
+            res[l - 1] = point;
+        } else {
+            res.push_back(point);
+        }
+    }
+    return res;
+}
+}  // namespace
+
+void SugiyamaAnalysis::remove_extra_waypoints() {
+    for (const auto* edge : g.edges()) {
+        waypoints_[edge] = simplify_vertices(waypoints_[edge]);
+    }
+
+    for (auto& io : io_waypoints_) {
+        io.second = simplify_vertices(io.second);
+    }
+}
+
+void SugiyamaAnalysis::translate_layout(float dx, float dy) {
+    for (const auto* node : g.nodes()) {
+        xs_[node] += dx;
+        ys_[node] += dy;
+    }
+
+    for (const auto* edge : g.edges()) {
+        for (auto& point : waypoints_[edge]) {
+            point.x += dx;
+            point.y += dy;
+        }
+    }
+
+    for (auto& io : io_waypoints_) {
+        for (auto& point : io.second) {
+            point.x += dx;
+            point.y += dy;
+        }
+    }
 }
 
 // We want to resize the node to take into account the edge

@@ -413,9 +413,9 @@ void Layout::compute_layout(const SESE::SESERegion& r) {
     heights_[region.node_ptr] = region.height;
     widths_[region.node_ptr]  = region.width;
 
-    if (sugiyama.has_top_loop_) {
-        translate_region(r, {.x = 0, .y = -2 * settings.Y_GUTTER});
-    }
+    // if (sugiyama.has_top_loop_) {
+    //     translate_region(r, {.x = 0, .y = -2 * settings.Y_GUTTER});
+    // }
 }
 
 void Layout::translate_region(const SESE::SESERegion& r, const Point& v) {

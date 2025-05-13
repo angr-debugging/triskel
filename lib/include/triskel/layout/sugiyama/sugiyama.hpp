@@ -262,6 +262,13 @@ struct SugiyamaAnalysis : public ILayout {
     void make_io_waypoint(IOPair pair);
 
     void make_io_waypoints();
+
+    /// @brief Moves the entire graph by dx and dy
+    void translate_layout(float dx, float dy);
+
+    /// @brief Removes redundant waypoints
+    void remove_extra_waypoints();
+
     // -----
 
     bool has_top_loop_    = false;

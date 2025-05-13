@@ -171,8 +171,8 @@ struct CFGLayoutImpl : CFGLayout {
         renderer.save(path);
     }
 
-    void render_and_save(ExportingRenderer& renderer,
-                         const std::string& path) const override {
+    void render_and_save_s(ExportingRenderer& renderer,
+                           const std::string& path) const override {
         render_and_save(renderer, std::filesystem::path(path));
     }
 
