@@ -103,6 +103,7 @@ void Triskel::OnFrame(float /*deltaTime*/) {
         imgui_renderer_->Begin("##main_graph", {s_RightPaneSize, 0.0F});
         layout_->render(*imgui_renderer_);
 
+        // Debug info on hover
         for (size_t i = 0; i < layout_->node_count(); ++i) {
             const auto tl     = layout_->get_coords(i);
             const auto width  = layout_->get_node_width(i);

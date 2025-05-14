@@ -37,7 +37,7 @@ auto draw_function(llvm::Function* f) {
 
     auto layout = triskel::make_layout(f, renderer.get());
 
-    layout->render_and_save(*renderer, "./out.svg");
+    layout->render_and_save_s(*renderer, "./out.svg");
 }
 
 };  // namespace

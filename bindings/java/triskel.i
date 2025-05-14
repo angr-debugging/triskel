@@ -12,9 +12,7 @@
 #include "triskel/triskel.hpp"
 %}
 
-namespace triskel {
-    struct Point;
-}
+%include "triskel/utils/point.hpp"
 
 %template(PointVector) std::vector<triskel::Point>;
 
