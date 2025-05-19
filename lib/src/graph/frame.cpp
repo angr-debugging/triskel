@@ -1,4 +1,7 @@
 #include "triskel/graph/frame.hpp"
+
+#include <utility>
+
 #include "triskel/graph/owning_graph.hpp"
 
 using triskel::Frame;

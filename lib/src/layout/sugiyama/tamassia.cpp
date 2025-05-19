@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <optional>
 #include <vector>
 
 #include "triskel/graph/igraph.hpp"

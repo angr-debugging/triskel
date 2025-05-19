@@ -39,3 +39,5 @@ if (ENABLE_LINTING)
 endif()
 
 install(TARGETS triskel LIBRARY DESTINATION triskel)
+
+add_compile_options("-Wall -Wextra -Wpedantic -Wshadow -Wuninitialized -Wmaybe-uninitialized")

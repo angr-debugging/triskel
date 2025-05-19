@@ -19,6 +19,13 @@ struct Attribute {
     using ConstRef =
         std::conditional_t<std::is_trivially_copyable_v<T>, T, const T&>;
 
+    template <typename U = T>
+    explicit Attribute(size_t size)
+        requires(std::is_convertible_v<std::nullptr_t, U>)
+        : v_{nullptr} {
+        data_.resize(size);
+    }
+
     Attribute(size_t size, const T& v) : v_{v} { data_.resize(size, v); }
 
     virtual ~Attribute() = default;
@@ -114,6 +121,15 @@ struct Attribute {
         }
     }
 
+    template <typename U = T>
+    auto resize_if_necessary(size_t id)
+        requires(!std::is_copy_constructible<U>())
+    {
+        if (id >= data_.size()) {
+            data_.resize(id + 1);
+        }
+    }
+
     /// @brief This is mutable as the data_ vector might get resized to account
     /// for new nodes
     mutable std::vector<T> data_;
@@ -127,8 +143,18 @@ struct NodeAttribute : public Attribute<NodeTag, T> {
     NodeAttribute(const IGraph& g, const T& v)
         : Attribute<NodeTag, T>{g.max_node_id(), v} {}
 
+    template <typename U = T>
+    explicit NodeAttribute(const IGraph& g)
+        requires(std::is_convertible_v<std::nullptr_t, U>)
+        : Attribute<NodeTag, T>{g.max_node_id()} {}
+
     /// @deprecated
     NodeAttribute(size_t size, const T& v) : Attribute<NodeTag, T>{size, v} {}
+
+    template <typename U = T>
+    explicit NodeAttribute(size_t size)
+        requires(std::is_convertible_v<std::nullptr_t, U>)
+        : Attribute<NodeTag, T>{size} {}
 
     [[nodiscard]] auto dump(IGraph& g) const -> std::string {
         auto s = std::string{};
@@ -144,8 +170,18 @@ struct EdgeAttribute : public Attribute<EdgeTag, T> {
     EdgeAttribute(const IGraph& g, const T& v)
         : Attribute<EdgeTag, T>{g.max_edge_id(), v} {}
 
+    template <typename U = T>
+    explicit EdgeAttribute(const IGraph& g)
+        requires(std::is_convertible_v<std::nullptr_t, U>)
+        : Attribute<NodeTag, T>{g.max_node_id()} {}
+
     /// @deprecated
     EdgeAttribute(size_t size, const T& v) : Attribute<EdgeTag, T>{size, v} {}
+
+    template <typename U = T>
+    explicit EdgeAttribute(size_t size)
+        requires(std::is_convertible_v<std::nullptr_t, U>)
+        : Attribute<NodeTag, T>{size} {}
 
     [[nodiscard]] auto dump(IGraph& g) const -> std::string {
         auto s = std::string{};

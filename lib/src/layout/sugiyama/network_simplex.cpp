@@ -53,9 +53,9 @@ auto SpanningTree::leave_edge() -> EdgeId {
 }
 
 void SpanningTree::init_rank() {
-    ranks_[g.root()]   = 0;
-    size_t found_nodes = 1;
-    size_t rank        = 0;
+    ranks_[g.root()]         = 0;
+    const size_t found_nodes = 1;
+    size_t rank              = 0;
 
     std::queue<const Node*> queue;
     NodeAttribute<size_t> in_degrees{g, 0};
@@ -72,7 +72,7 @@ void SpanningTree::init_rank() {
     assert(queue.size() == 1);
 
     while (!queue.empty()) {
-        size_t level_size = queue.size();
+        const size_t level_size = queue.size();
 
         for (size_t i = 0; i < level_size; ++i) {
             const auto* node = queue.front();

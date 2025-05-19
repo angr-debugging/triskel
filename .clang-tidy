@@ -19,6 +19,6 @@ Checks: >
   -bugprone-easily-swappable-parameters,
 CheckOptions:
   - key: misc-include-cleaner.IgnoreHeaders
-    value: fmt/printf.h;fmt/chrono.h;bits/ranges_algo.h
+    value: fmt/.*;bits/ranges_algo.h
   - key: modernize-use-ranges.UseReversePipe
     value: true

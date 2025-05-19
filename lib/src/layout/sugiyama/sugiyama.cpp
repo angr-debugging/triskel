@@ -1,5 +1,6 @@
 #include "triskel/layout/sugiyama/sugiyama.hpp"
 #include "triskel/layout/ilayout.hpp"
+#include "triskel/layout/sugiyama/eiglsperger.hpp"
 #include "triskel/layout/sugiyama/layer_assignement.hpp"
 
 #include <algorithm>
@@ -71,7 +72,7 @@ void SugiyamaAnalysis::init_node_layers() {
     node_layers_.resize(layer_count_);
 
     for (const auto* node : g.nodes()) {
-        node_layers_[layers_.get(*node)].push_back(node);
+        node_layers_[layers_[node]].push_back(node);
     }
 }
 
@@ -597,14 +598,20 @@ void SugiyamaAnalysis::remove_long_edges() {
 }
 
 void SugiyamaAnalysis::vertex_ordering() {
-    auto ordering = VertexOrdering(g, layers_, layer_count_);
+    auto ordering = EVertexOrdering(g, layers_, is_dummy_, layer_count_);
     orders_       = ordering.orders_;
+
     for (size_t l = 0; l < layer_count_; ++l) {
         auto& nodes = node_layers_[l];
 
         std::ranges::sort(nodes, [this](const Node* a, const Node* b) {
-            return orders_[*a] < orders_[*b];
+            return orders_[a] < orders_[b];
         });
+
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            const auto order = orders_[nodes[i]];
+            assert(order == i);
+        }
     }
 };
 

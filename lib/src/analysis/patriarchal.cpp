@@ -1,8 +1,8 @@
 #include "triskel/analysis/patriarchal.hpp"
 
 #include <cassert>
+#include <cstddef>
 #include <functional>
-#include <generator>
 #include <queue>
 #include <vector>
 

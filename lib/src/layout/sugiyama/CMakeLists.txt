@@ -1,5 +1,6 @@
 target_sources(triskel
 PRIVATE
+  eiglsperger.cpp
   network_simplex.cpp
   sugiyama.cpp
   vertex_ordering.cpp

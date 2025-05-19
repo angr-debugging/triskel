@@ -25,7 +25,6 @@ cmake_dependent_option(BUILD_BENCH     "Builds the binary used for benchmarking"
 cmake_dependent_option(BUILD_GUI       "Builds the gui binary"                     OFF "ENABLE_LLVM; ENABLE_IMGUI" OFF)
 cmake_dependent_option(BUILD_IMG       "Builds the img binary"                     OFF "ENABLE_LLVM; ENABLE_CAIRO" OFF)
 
-
 # libfmt
 FetchContent_Declare(
     fmt

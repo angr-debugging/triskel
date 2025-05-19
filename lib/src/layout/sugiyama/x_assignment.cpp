@@ -2,11 +2,12 @@
 // Boris Kopf https://link.springer.com/content/pdf/10.1007/3-540-45848-4_3
 #include "triskel/layout/sugiyama/x_coordinate_assignment.hpp"
 
-#include <fmt/base.h>
+#include <fmt/core.h>
 #include <fmt/format.h>
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -129,18 +130,17 @@ struct FSHCA {
     auto is_incident(const Node* node) -> std::optional<size_t> {
         auto res = std::optional<size_t>();
 
+        if (!is_dummy_[node]) {
+            // We only want inner nodes to be marked as incident
+            return {};
+        }
+
         const auto& neighbors =
             vdir == TD::TOP ? node->parent_edges() : node->child_edges();
 
         for (const auto* edge : neighbors) {
-            if (is_dummy_[edge->to] || is_dummy_[edge->to]) {
-                const auto* neighbor = vdir == TD::TOP ? edge->from : edge->to;
-
-                if (is_top_bottom_[neighbor] && !is_dummy_[node] ||
-                    is_top_bottom_[node] && !is_dummy_[neighbor]) {
-                    continue;
-                }
-
+            const auto* neighbor = vdir == TD::TOP ? edge->from : edge->to;
+            if (is_dummy_[neighbor]) {
                 const auto order = order_[neighbor];
                 if (!res.has_value()) {
                     res = order;
@@ -239,18 +239,21 @@ struct FSHCA {
                                                 : node->child_edges());
 
                 if (!is_dummy_[node]) {
-                    neighbors = std::ranges::views::filter(
-                                    neighbors,
-                                    [this](const Edge* n) {
-                                        return !is_top_bottom_[n->from];
-                                    }) |
-                                std::ranges::to<std::vector<Edge*>>();
+                    neighbors =
+                        std::ranges::views::filter(
+                            neighbors,
+                            [this](const Edge* n) {
+                                return !is_top_bottom_[vdir == TD::TOP ? n->from
+                                                                       : n->to];
+                            }) |
+                        std::ranges::to<std::vector<Edge*>>();
                 }
 
-                std::ranges::sort(neighbors,
-                                  [this](const Edge* a, const Edge* b) -> bool {
-                                      return order_[a->from] < order_[b->from];
-                                  });
+                std::ranges::sort(
+                    neighbors, [this](const Edge* a, const Edge* b) -> bool {
+                        return order_[vdir == TD::TOP ? a->from : a->to] <
+                               order_[vdir == TD::TOP ? b->from : b->to];
+                    });
 
                 if (neighbors.empty()) {
                     continue;
@@ -303,7 +306,7 @@ struct FSHCA {
 
     auto set_x(const Node* node, int64_t x) -> void {
         was_placed_[node] = true;
-        xs_[node]         = x;
+        xs_[node]         = static_cast<float>(x);
     }
 
     /// @brief Finds the first predecessor of a node that isn't a top down node
@@ -311,7 +314,7 @@ struct FSHCA {
         const auto& layer = layers_[layer_[node]];
         auto order        = order_[node];
 
-        while (hdir == LR::LEFT ? 0 < order : order < layer.size() - 1) {
+        while ((hdir == LR::LEFT) ? (order >= 1) : order < layer.size() - 1) {
             order += hdir == LR::LEFT ? -1 : 1;
 
             const auto* node = layer[order];
@@ -388,21 +391,22 @@ struct FSHCA {
             }
         }
 
-        float min_x = 0.0F;
+        float min_x = std::numeric_limits<float>::max();
+        for (const auto* node : g_.nodes()) {
+            xs_[node] = xs_[roots_[node]] + drift_[node];
+        }
 
-        for (const auto& node : g_.nodes()) {
-            xs_[node]        = xs_[roots_[node]] + drift_[node];
+        for (const auto* node : g_.nodes()) {
             const auto shift = shifts_[sinks_[roots_[node]]];
             if (hdir == LR::LEFT
                     ? shift < std::numeric_limits<int64_t>::max()
                     : shift > std::numeric_limits<int64_t>::min()) {
-                xs_[node] += shifts_[sinks_[roots_[node]]];
+                xs_[node] += shift;
             }
-
-            min_x = std::min(xs_[node], 0.0F);
+            min_x = std::min(xs_[node], min_x);
         }
 
-        for (const auto& node : g_.nodes()) {
+        for (const auto* node : g_.nodes()) {
             xs_[node] -= min_x;
         }
     }
@@ -438,26 +442,25 @@ auto triskel::make_x_coords(const IGraph& g,
                         g, layers, layer, order, widths, is_top_bottom,
                         is_dummy, start_x_offset, end_x_offset, x_gutter)
                         .xs_;
-    const auto tr = FSHCA<TD::TOP, LR::RIGHT>(
-                        g, layers, layer, order, widths, is_top_bottom,
-                        is_dummy, start_x_offset, end_x_offset, x_gutter)
-                        .xs_;
-    const auto dl = FSHCA<TD::DOWN, LR::LEFT>(
-                        g, layers, layer, order, widths, is_top_bottom,
-                        is_dummy, start_x_offset, end_x_offset, x_gutter)
-                        .xs_;
-    const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(
-                        g, layers, layer, order, widths, is_top_bottom,
-                        is_dummy, start_x_offset, end_x_offset, x_gutter)
-                        .xs_;
+    // const auto tr = FSHCA<TD::TOP, LR::RIGHT>(
+    //                     g, layers, layer, order, widths, is_top_bottom,
+    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
+    //                     .xs_;
+    // const auto dl = FSHCA<TD::DOWN, LR::LEFT>(
+    //                     g, layers, layer, order, widths, is_top_bottom,
+    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
+    //                     .xs_;
+    // const auto dr = FSHCA<TD::DOWN, LR::RIGHT>(
+    //                     g, layers, layer, order, widths, is_top_bottom,
+    //                     is_dummy, start_x_offset, end_x_offset, x_gutter)
+    //                     .xs_;
 
-    NodeAttribute<float> xs{g, 0.0F};
+    // NodeAttribute<float> xs{g, 0.0F};
 
-    for (const auto& node : g.nodes()) {
-        auto x = std::array<float, 4>{tl[node], tr[node], dl[node], dr[node]};
-        sort4(x);
-        xs[node] = (x[1] + x[2]) / 2;
-    }
+    // for (const auto& node : g.nodes()) {
+    //     auto x = std::array<float, 4>{tl[node], tr[node], dl[node],
+    //     dr[node]}; sort4(x); xs[node] = (x[1] + x[2]) / 2;
+    // }
 
-    return xs;
+    return tl;
 }

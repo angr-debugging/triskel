@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <memory>
 #include <stack>
+#include <utility>
+#include <variant>
 
 #include <fmt/core.h>
 #include <fmt/printf.h>

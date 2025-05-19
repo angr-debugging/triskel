@@ -21,7 +21,7 @@ auto square(const auto& x) {
 }
 
 struct ImGuiRendererImpl : public ImguiRenderer {
-    double scale_ = 1.0;
+    float scale_ = 1.0;
 
     ImGuiRendererImpl() {
         STYLE_BASICBLOCK_BORDER = {.thickness = 3.0F, .color = Black};
@@ -54,12 +54,10 @@ struct ImGuiRendererImpl : public ImguiRenderer {
         auto view_origin = canvas_.ViewOrigin();
 
         if (ImGui::IsItemHovered() && (io.MouseWheel != 0)) {
-            const auto newScale =
-                std::min(std::max(scale_ + (io.MouseWheel * 0.05), 0.01), 1.0);
+            const float newScale = std::min(
+                std::max(scale_ + (io.MouseWheel * 0.05F), 0.01F), 1.0F);
 
             const auto mousePos = ImGui::GetMousePos() * view_scale;
-
-            const auto scaleRatio = square(newScale / scale_);
 
             canvas_.SetView(mousePos + view_origin -
                                 ImGui::GetMousePos() * square(newScale),
