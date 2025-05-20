@@ -26,6 +26,8 @@ struct Color {
     uint8_t a;
 
     [[nodiscard]] static auto from_hex(uint32_t rgba) -> Color;
+    [[nodiscard]] auto to_hex() const -> uint32_t;
+    [[nodiscard]] auto to_hex_string() const -> std::string;
 };
 
 constexpr Color Black{.r = 0, .g = 0, .b = 0, .a = 255};
@@ -222,6 +224,8 @@ struct LayoutBuilder {
 
 [[nodiscard]] auto git_version() -> std::string;
 
+[[nodiscard]] auto make_fast_svg_renderer()
+    -> std::unique_ptr<ExportingRenderer>;
 }  // namespace triskel
 
 #ifdef TRISKEL_CAIRO

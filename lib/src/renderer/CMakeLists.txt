@@ -6,3 +6,6 @@ if (ENABLE_IMGUI)
   target_sources(triskel PRIVATE imgui.cpp)
   add_subdirectory(external)
 endif()
+
+
+target_sources(triskel PRIVATE svg.cpp)

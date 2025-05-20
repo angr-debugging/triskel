@@ -1,10 +1,12 @@
 #include "triskel/triskel.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
 
+#include <fmt/format.h>
 #include <llvm/IR/CFG.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/Casting.h>
@@ -66,9 +68,27 @@ auto triskel::make_layout(llvm::Function* function,
         }
     }
 
+    fmt::print("Measuring nodes\n");
     if (render != nullptr) {
         builder->measure_nodes(*render);
     }
-
+    fmt::print("Starting layout\n");
     return builder->build();
+}
+
+auto triskel::Color::from_hex(uint32_t rgba) -> triskel::Color {
+    const uint8_t r = ((rgba >> 24) & 0xFF);
+    const uint8_t g = ((rgba >> 16) & 0xFF);
+    const uint8_t b = ((rgba >> 8) & 0xFF);
+    const uint8_t a = (rgba & 0xFF);
+    return {.r = r, .g = g, .b = b, .a = a};
+}
+
+auto triskel::Color::to_hex() const -> uint32_t {
+    return (static_cast<uint32_t>(r) << 24) + (static_cast<uint32_t>(g) << 16) +
+           (static_cast<uint32_t>(b) << 8) + static_cast<uint32_t>(a);
+}
+
+auto triskel::Color::to_hex_string() const -> std::string {
+    return fmt::format("#{:08X}", to_hex());
 }

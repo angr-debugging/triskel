@@ -33,9 +33,10 @@ auto load_module_from_path(llvm::LLVMContext& ctx, const std::string& path)
 }
 
 auto draw_function(llvm::Function* f) {
-    auto renderer = triskel::make_svg_renderer();
+    auto renderer = triskel::make_fast_svg_renderer();
 
     auto layout = triskel::make_layout(f, renderer.get());
+    fmt::print("Saving function to svg\n");
 
     layout->render_and_save_s(*renderer, "./out.svg");
 }
