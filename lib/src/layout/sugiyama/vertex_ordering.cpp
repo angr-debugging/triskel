@@ -45,8 +45,8 @@ namespace {
 
     auto hi_arr = std::vector<size_t>{arr.begin() + mid, arr.begin() + hi};
 
-    auto lo_sz = mid - lo;
-    auto hi_sz = hi - mid;
+    size_t lo_sz = mid - lo;
+    size_t hi_sz = hi - mid;
 
     assert(lo_sz == lo_arr.size());
     assert(hi_sz == hi_arr.size());

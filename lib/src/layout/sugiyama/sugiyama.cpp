@@ -23,7 +23,6 @@
 
 #include "triskel/analysis/dfs.hpp"
 #include "triskel/graph/igraph.hpp"
-#include "triskel/layout/sugiyama/vertex_ordering.hpp"
 #include "triskel/layout/sugiyama/x_coordinate_assignment.hpp"
 #include "triskel/utils/attribute.hpp"
 #include "triskel/utils/generator.hpp"

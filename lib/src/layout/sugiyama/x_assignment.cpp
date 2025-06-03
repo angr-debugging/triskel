@@ -285,8 +285,9 @@ struct FSHCA {
                     }
 
                     if (!marked_[edge] &&
-                        (r == -1 || (hdir == LR::LEFT ? r < order_[um]
-                                                      : r > order_[um]))) {
+                        (r == static_cast<size_t>(-1) ||
+                         (hdir == LR::LEFT ? r < order_[um]
+                                           : r > order_[um]))) {
                         aligns_[um]   = node;
                         roots_[node]  = roots_[um];
                         aligns_[node] = roots_[node];

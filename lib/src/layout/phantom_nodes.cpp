@@ -73,7 +73,7 @@ struct RNode {
     }
 
     void split(const Node* n, const std::span<size_t>& n_radix) {
-        auto i = 0;
+        size_t i = 0;
 
         auto size = std::min(radix.size(), n_radix.size());
         while (i < size) {
