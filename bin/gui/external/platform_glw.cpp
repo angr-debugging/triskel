@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include <imgui.h>
+#include <iostream>
 #include "imgui_impl_glfw.h"
 
 struct PlatformGLFW final : Platform {
@@ -15,9 +16,8 @@ struct PlatformGLFW final : Platform {
 
     auto ApplicationStart(int argc, char** argv) -> bool override;
     void ApplicationStop() override;
-    auto OpenMainWindow(const char* title,
-                        int width,
-                        int height) -> bool override;
+    auto OpenMainWindow(const char* title, int width, int height)
+        -> bool override;
     auto CloseMainWindow() -> bool override;
     [[nodiscard]] auto GetMainWindowHandle() const -> void* override;
     void SetMainWindowTitle(const char* title) override;
@@ -54,9 +54,8 @@ void PlatformGLFW::ApplicationStop() {
     glfwTerminate();
 }
 
-auto PlatformGLFW::OpenMainWindow(const char* title,
-                                  int width,
-                                  int height) -> bool {
+auto PlatformGLFW::OpenMainWindow(const char* title, int width, int height)
+    -> bool {
     if (m_Window != nullptr) {
         return false;
     }
@@ -71,6 +70,7 @@ auto PlatformGLFW::OpenMainWindow(const char* title,
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
     initializer = &ImGui_ImplGlfw_InitForOpenGL;
     glfwWindowHint(GLFW_SCALE_TO_MONITOR, GL_TRUE);
@@ -80,10 +80,12 @@ auto PlatformGLFW::OpenMainWindow(const char* title,
 
     m_Window = glfwCreateWindow(width, height, title, nullptr, nullptr);
     if (m_Window == nullptr) {
+        std::cerr << "Failed to create a window\n";
         return false;
     }
 
     if ((initializer == nullptr) || !initializer(m_Window, true)) {
+        std::cerr << "Imgui failed to initialize\n";
         glfwDestroyWindow(m_Window);
         m_Window = nullptr;
         return false;

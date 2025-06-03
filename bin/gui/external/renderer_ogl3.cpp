@@ -1,8 +1,11 @@
 #include "renderer.h"
 
 #include <GL/glew.h>
+#include <GLFW/glfw3.h>
 #include <imgui_impl_opengl3.h>
 #include <algorithm>
+#include <iostream>
+#include <ostream>
 
 #include "platform.h"
 
@@ -24,9 +27,8 @@ struct RendererOpenGL3 final : Renderer {
     void Resize(int width, int height) override;
 
     auto FindTexture(ImTextureID texture) -> ImVector<ImTexture>::iterator;
-    auto CreateTexture(const void* data,
-                       int width,
-                       int height) -> ImTextureID override;
+    auto CreateTexture(const void* data, int width, int height)
+        -> ImTextureID override;
     void DestroyTexture(ImTextureID texture) override;
     auto GetTextureWidth(ImTextureID texture) -> int override;
     auto GetTextureHeight(ImTextureID texture) -> int override;
@@ -45,15 +47,24 @@ auto RendererOpenGL3::Create(Platform& platform) -> bool {
     // Technically we should initialize OpenGL context here,
     // but for now we relay on one created by GLFW3
 
-    bool err = glewInit() != GLEW_OK;
+    if (glfwGetCurrentContext() == nullptr) {
+        std::cerr << "No current OpenGL context before glewInit()!\n";
+        return false;
+    }
 
-    if (err) {
+    glewExperimental = GL_TRUE;
+    auto err         = glewInit();
+
+    if (err != GLEW_OK) {
+        std::cerr << "Error while initializing GLEW\n";
+        std::cerr << glewGetErrorString(err) << "\n";
         return false;
     }
 
     const char* glslVersion = "#version 130";
 
     if (!ImGui_ImplOpenGL3_Init(glslVersion)) {
+        std::cerr << "Error while initializing ImGui with OpenGL\n";
         return false;
     }
 
@@ -91,9 +102,8 @@ void RendererOpenGL3::Resize(int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-auto RendererOpenGL3::CreateTexture(const void* data,
-                                    int width,
-                                    int height) -> ImTextureID {
+auto RendererOpenGL3::CreateTexture(const void* data, int width, int height)
+    -> ImTextureID {
     m_Textures.resize(m_Textures.size() + 1);
     ImTexture& texture = m_Textures.back();
 

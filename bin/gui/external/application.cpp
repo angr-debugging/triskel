@@ -1,4 +1,5 @@
 #include "application.h"
+#include <iostream>
 #include "platform.h"
 #include "renderer.h"
 
@@ -35,18 +36,20 @@ bool Application::Create(int argc,
     m_Context = ImGui::CreateContext();
     ImGui::SetCurrentContext(m_Context);
 
-    if (!m_Platform->OpenMainWindow("Application", width, height))
+    if (!m_Platform->OpenMainWindow("Triskel", width, height)) {
+        std::cerr << "Failed to open a window\n";
         return false;
+    }
 
-    if (!m_Renderer->Create(*m_Platform))
+    if (!m_Renderer->Create(*m_Platform)) {
+        std::cerr << "Failed to create the renderer\n";
         return false;
-
-    m_IniFilename = m_Name + ".ini";
+    }
 
     ImGuiIO& io = ImGui::GetIO();
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
     // Controls
-    io.IniFilename = m_IniFilename.c_str();
+    io.IniFilename = nullptr;
     io.LogFilename = nullptr;
 
     ImGui::StyleColorsDark();
@@ -94,9 +97,9 @@ void Application::RecreateFontAtlas(float scale) {
     config.PixelSnapH  = false;
 
     m_DefaultFont = io.Fonts->AddFontFromFileTTF(
-        ASSET_PATH"/fonts/Roboto-Medium.ttf", 18.0f * scale, &config);
-    m_HeaderFont = io.Fonts->AddFontFromFileTTF(ASSET_PATH"/fonts/Lato-Light.ttf",
-                                                20.0f * scale, &config);
+        ASSET_PATH "/fonts/Roboto-Medium.ttf", 18.0f * scale, &config);
+    m_HeaderFont = io.Fonts->AddFontFromFileTTF(
+        ASSET_PATH "/fonts/Lato-Light.ttf", 20.0f * scale, &config);
 
     io.Fonts->Build();
 }
@@ -200,9 +203,8 @@ auto Application::LoadTexture(const char* path) -> ImTextureID {
     return 0;
 }
 
-auto Application::CreateTexture(const void* data,
-                                int width,
-                                int height) -> ImTextureID {
+auto Application::CreateTexture(const void* data, int width, int height)
+    -> ImTextureID {
     return m_Renderer->CreateTexture(data, width, height);
 }
 
