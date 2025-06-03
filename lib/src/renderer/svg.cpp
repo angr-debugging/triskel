@@ -71,7 +71,7 @@ struct SVGRenderer : public ExportingRenderer {
                         float height,
                         Color fill) override {
         fmt::format_to(std::back_inserter(buf),
-                       "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\""
+                       "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" "
                        "fill=\"#{:08X}\" />\n",
                        tl.x, tl.y, width, height, fill.to_hex());
     };
@@ -82,7 +82,7 @@ struct SVGRenderer : public ExportingRenderer {
                                const StrokeStyle& style) override {
         fmt::format_to(
             std::back_inserter(buf),
-            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\""
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" "
             "fill=\"none\" stroke=\"#{:08X}\" stroke-width=\"{}\" />\n",
             tl.x, tl.y, width, height, style.color.to_hex(), style.thickness);
     };
