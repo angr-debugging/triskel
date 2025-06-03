@@ -6,6 +6,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/ModuleSlotTracker.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/raw_ostream.h>
@@ -32,10 +33,11 @@ auto load_module_from_path(llvm::LLVMContext& ctx, const std::string& path)
     return m;
 }
 
-auto draw_function(llvm::Function* f) {
+auto draw_function(llvm::Function* f, llvm::ModuleSlotTracker& MST) {
     auto renderer = triskel::make_fast_svg_renderer();
 
-    auto layout = triskel::make_layout(f, renderer.get());
+    fmt::print("Making layout\n");
+    auto layout = triskel::make_layout(f, renderer.get(), &MST);
     fmt::print("Saving function to svg\n");
 
     layout->render_and_save_s(*renderer, "./out.svg");
@@ -57,15 +59,17 @@ auto main(int argc, char** argv) -> int {
     llvm::LLVMContext ctx;
 
     auto module = load_module_from_path(ctx, argv[1]);
-
+    fmt::print("Loaded llvm\n");
     auto* function = module->getFunction(argv[2]);
 
     if (function == nullptr) {
         fmt::print("No such function found: \"{}\"\n", argv[2]);
         return 1;
     }
+    fmt::print("Found function\n");
 
-    draw_function(function);
+    llvm::ModuleSlotTracker MST{module.get()};
+    draw_function(function, MST);
 
     return 0;
 }

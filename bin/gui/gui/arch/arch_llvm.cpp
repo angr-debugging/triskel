@@ -5,6 +5,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/ModuleSlotTracker.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/Error.h>
@@ -18,6 +19,7 @@ namespace {
 
 struct LLVMArch : public Arch {
     llvm::LLVMContext ctx;
+    std::unique_ptr<llvm::ModuleSlotTracker> MST;
     std::unique_ptr<llvm::Module> m;
 
     void load_module_from_path(const std::string& path) {
@@ -33,6 +35,7 @@ struct LLVMArch : public Arch {
             fmt::print("Error while attempting to read the ll file {}", path);
             throw std::runtime_error("Error loading llvm module");
         }
+        MST = std::make_unique<llvm::ModuleSlotTracker>(m.get());
     }
 
     auto select_function(const std::string& name, triskel::Renderer& renderer)
@@ -40,7 +43,7 @@ struct LLVMArch : public Arch {
         auto* f = m->getFunction(name);
         fmt::print("Selecting function {} ({} blocks)\n", f->getName().str(),
                    f->size());
-        return triskel::make_layout(f, &renderer);
+        return triskel::make_layout(f, &renderer, MST.get());
     }
 
     void start(const std::string& path) override {
