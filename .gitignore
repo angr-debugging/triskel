@@ -13,3 +13,5 @@ triskel-gui
 *.csv
 *.ini
 out.*
+
+*.bc

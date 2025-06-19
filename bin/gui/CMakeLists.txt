@@ -14,6 +14,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(LIEF)
 
+
+find_package(glfw3 CONFIG REQUIRED)
+
 target_link_libraries(triskel-gui PRIVATE
   triskel
   fmt::fmt

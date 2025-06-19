@@ -55,11 +55,15 @@ auto RendererOpenGL3::Create(Platform& platform) -> bool {
     glewExperimental = GL_TRUE;
     auto err         = glewInit();
 
+// In recent versions of wayland this causes the program to crash
+// https://github.com/nigels-com/glew/issues/172
+#if 0
     if (err != GLEW_OK) {
         std::cerr << "Error while initializing GLEW\n";
         std::cerr << glewGetErrorString(err) << "\n";
         return false;
     }
+#endif
 
     const char* glslVersion = "#version 130";
 
