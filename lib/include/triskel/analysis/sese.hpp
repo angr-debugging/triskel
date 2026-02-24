@@ -21,13 +21,13 @@ struct SESE {
     struct SESERegionData {
         SESERegionData() = default;
 
-        EdgeId entry_edge;
-        NodeId entry_node;
+        const Edge* entry_edge;
+        const Node* entry_node;
 
-        EdgeId exit_edge;
-        NodeId exit_node;
+        const Edge* exit_edge;
+        const Node* exit_node;
 
-        std::vector<NodeId> nodes;
+        std::vector<const Node*> nodes;
     };
     using SESERegion = Tree<SESERegionData>::Node;
 
@@ -39,8 +39,8 @@ struct SESE {
     // index of edge's cycle equivalence set
     EdgeAttribute<size_t> classes_;
 
-    [[nodiscard]] auto get_region(const Node& node) const -> SESERegion& {
-        return *node_regions.get(node);
+    [[nodiscard]] auto get_region(const Node* node) const -> SESERegion& {
+        return *node_regions[node];
     }
 
    private:
@@ -57,37 +57,38 @@ struct SESE {
     void preprocess_graph();
 
     /// @brief Is the edge `edge` a backedge from `from` to `to`
-    [[nodiscard]] auto is_backedge_stating_from(const Edge& edge,
-                                                const Node& from,
-                                                const Node& to) -> bool;
+    [[nodiscard]] auto is_backedge_stating_from(const Edge* edge,
+                                                const Node* from,
+                                                const Node* to) -> bool;
 
     /// @brief Calculates hi0
     /// hi0 is the ?
-    [[nodiscard]] auto get_hi0(const Node& node) -> size_t;
+    [[nodiscard]] auto get_hi0(const Node* node) -> size_t;
 
     /// @brief Calculates hi1
-    [[nodiscard]] auto get_hi1(const Node& node) -> size_t;
+    [[nodiscard]] auto get_hi1(const Node* node) -> size_t;
 
     /// @brief Calculates hi2
-    [[nodiscard]] auto get_hi2(const Node& node, size_t hi1) -> size_t;
+    [[nodiscard]] auto get_hi2(const Node* node, size_t hi1) -> size_t;
 
-    void create_capping_backedge(const Node& node,
+    void create_capping_backedge(const std::vector<const Node*>& nodes,
+                                 const Node* node,
                                  BracketList& blist,
                                  size_t hi2);
 
-    [[nodiscard]] auto get_parent_tree_edge(const Node& node) -> Edge;
+    [[nodiscard]] auto get_parent_tree_edge(const Node* node) -> Edge*;
 
-    void determine_class(const Node& node, BracketList& blist);
+    void determine_class(const Node* node, BracketList& blist);
 
     void determine_region_boundaries(
-        const Node& node,
+        const Node* node,
         NodeAttribute<bool>& visited,
         const std::vector<NodeClass>& visited_class);
 
     /// @brief Build the program structure tree using DFS once we know the entry
     /// and exit edges of each region
-    void construct_program_structure_tree(const Node& node,
-                                          SESERegion* current_region,
+    void construct_program_structure_tree(const Node* node,
+                                          SESERegion& current_region,
                                           NodeAttribute<bool>& visited);
 
     /// @brief The graph for which we are identifying SESE regions

@@ -1,14 +1,19 @@
 cmake_minimum_required(VERSION 3.30)
 
+include(cmake/version.cmake)
+include(cmake/cpack.cmake)
 include(CMakeDependentOption)
 include(FetchContent)
 
 project(Triskel)
 
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+message(STATUS "CMAKE_CXX_STANDARD = ${CMAKE_CXX_STANDARD}")
+message(STATUS "CMAKE_CXX_STANDARD_REQUIRED = ${CMAKE_CXX_STANDARD_REQUIRED}")
+message(STATUS "CMAKE_CXX_EXTENSIONS = ${CMAKE_CXX_EXTENSIONS}")
 
 option(ENABLE_LLVM      "Adds utilities to convert LLVM functions to triskel graphs"    OFF)
 option(ENABLE_IMGUI     "Adds utilities to display graphs in imgui"                     OFF)
@@ -18,7 +23,8 @@ option(ENABLE_LINTING   "Linting"                                               
 option(ENABLE_TESTING   "Tests"                                                         OFF)
 
 cmake_dependent_option(BUILD_WASM      "Builds to wasm"                            OFF  "NOT ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
-cmake_dependent_option(BUILD_BINDINGS  "Builds the python bindings"                OFF "ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
+cmake_dependent_option(BUILD_PYTHON_BINDINGS  "Builds the python bindings"         OFF "ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
+cmake_dependent_option(BUILD_JAVA_BINDINGS    "Builds the java bindings"           OFF "ENABLE_CAIRO; NOT ENABLE_LLVM; NOT ENABLE_IMGUI" OFF)
 cmake_dependent_option(BUILD_BENCH     "Builds the binary used for benchmarking"   OFF "ENABLE_LLVM" OFF)
 cmake_dependent_option(BUILD_GUI       "Builds the gui binary"                     OFF "ENABLE_LLVM; ENABLE_IMGUI" OFF)
 cmake_dependent_option(BUILD_IMG       "Builds the img binary"                     OFF "ENABLE_LLVM; ENABLE_CAIRO" OFF)
@@ -33,6 +39,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 message(STATUS "Found fmt version ${fmt_VERSION}")
+
+FetchContent_Declare(cmake_git_version_tracking
+  GIT_REPOSITORY https://github.com/andrew-hardin/cmake-git-version-tracking.git
+)
+FetchContent_MakeAvailable(cmake_git_version_tracking)
 
 if(ENABLE_TESTING)
     message(STATUS "Building tests")
@@ -86,10 +97,9 @@ if (ENABLE_IMGUI)
     find_package(GLEW REQUIRED)
 endif()
 
-if(BUILD_BINDINGS)
-    message(STATUS "Building bindings")
-    add_subdirectory(bindings)
-endif()
+
+message(STATUS "Building bindings")
+add_subdirectory(bindings)
 
 add_subdirectory(bin)
 add_subdirectory(lib)

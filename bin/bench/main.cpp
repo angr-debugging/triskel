@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <fmt/base.h>
 #include <fmt/chrono.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -315,7 +316,7 @@ auto write_str_to_file(const std::string& path, const std::string& data) {
 }
 
 auto run_on_function(llvm::Function& function,
-                     size_t& errors,
+                     size_t& /*errors*/,
                      size_t& skipped,
                      llvm::ModuleSlotTracker& MST) -> std::optional<Stats> {
     if (function.isDeclaration()) {
@@ -360,8 +361,8 @@ auto run_on_function(llvm::Function& function,
     };
 }
 
-auto run_on_module(llvm::Module& module,
-                   llvm::ModuleSlotTracker& MST) -> std::vector<Stats> {
+auto run_on_module(llvm::Module& module, llvm::ModuleSlotTracker& MST)
+    -> std::vector<Stats> {
     fmt::print("Running on module: {}\n", module.getName().str());
 
     auto stats = std::vector<Stats>{};
@@ -380,6 +381,7 @@ auto run_on_module(llvm::Module& module,
     bar.start();
     for (auto& function : module) {
         bar.draw();
+        fmt::print("{}\n", function.getName().str());
         auto stat = run_on_function(function, errors, skipped, MST);
         if (stat.has_value()) {
             intersections += stat->nb_intersections;

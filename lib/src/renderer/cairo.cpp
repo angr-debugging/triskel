@@ -6,6 +6,11 @@
 #include <ranges>
 #include <string>
 
+#ifdef _WIN32
+    #define NOMINMAX
+    #include <windows.h>
+#endif
+
 #include <cairo/cairo-svg.h>
 #include <cairo/cairo.h>
 
@@ -15,6 +20,28 @@
 using namespace triskel;
 
 namespace {
+static std::string path_to_utf8(const std::filesystem::path& p) {
+#ifdef _WIN32
+    const std::wstring ws = p.wstring();
+    if (ws.empty()) return {};
+
+    int needed = WideCharToMultiByte(
+        CP_UTF8, 0, ws.c_str(), (int)ws.size(),
+        nullptr, 0, nullptr, nullptr);
+
+    std::string out(needed, '\0');
+
+    WideCharToMultiByte(
+        CP_UTF8, 0, ws.c_str(), (int)ws.size(),
+        &out[0], needed, nullptr, nullptr);
+
+    return out;
+#else
+    return p.string();
+#endif
+}
+
+
 struct CairoRenderer : public ExportingRenderer {
     CairoRenderer() {
         text_surface = make_image_surface(CAIRO_FORMAT_ARGB32, 1, 1);
@@ -145,9 +172,10 @@ struct CairoRenderer : public ExportingRenderer {
         const std::filesystem::path& path,
         int width,
         int height) -> std::shared_ptr<cairo_surface_t> {
-        return {
-            cairo_svg_surface_create(path.c_str(), width, height),
-            [](cairo_surface_t* surface) { cairo_surface_destroy(surface); }};
+            const std::string path_utf8 = path_to_utf8(path);
+            return {
+                cairo_svg_surface_create(path_utf8.c_str(), width, height),
+                [](cairo_surface_t* surface) { cairo_surface_destroy(surface); }};
     }
 
     [[nodiscard]] static auto make_recording_surface(double width,
@@ -183,8 +211,8 @@ struct CairoPNGRenderer : CairoRenderer {
         // Replay recorded drawing
         cairo_set_source_surface(png_cr.get(), surface.get(), 0, 0);
         cairo_paint(png_cr.get());
-
-        cairo_surface_write_to_png(png_surface.get(), path.c_str());
+        const std::string path_utf8 = path_to_utf8(path);
+        cairo_surface_write_to_png(png_surface.get(), path_utf8.c_str());
     };
 };
 

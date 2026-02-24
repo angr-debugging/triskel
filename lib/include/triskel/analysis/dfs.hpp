@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <generator>
 #include <vector>
 
 #include "triskel/analysis/patriarchal.hpp"
@@ -19,7 +20,7 @@ struct DFSAnalysis : public Patriarchal {
     ~DFSAnalysis() override = default;
 
     /// @brief Returns the graph nodes in DFS order
-    auto nodes() -> std::vector<Node>;
+    auto nodes() -> Container<const Node*>;
 
     /// @brief Is an edge a back edge
     auto is_backedge(EdgeId e) const -> bool;
@@ -34,7 +35,7 @@ struct DFSAnalysis : public Patriarchal {
     auto is_forward(EdgeId e) const -> bool;
 
     /// @brief The index of a node in the dfs ordered set of nodes
-    auto dfs_num(NodeId n) const -> size_t;
+    auto dfs_num(const Node* n) const -> size_t;
 
     /// @brief Prints the type of an edge
     // Mainly for debugging
@@ -44,10 +45,10 @@ struct DFSAnalysis : public Patriarchal {
     enum class EdgeType : uint8_t { None, Tree, Back, Cross, Forward };
 
     /// @brief Was this node previously visited in `dfs`
-    auto was_visited(const Node& node) -> bool;
+    auto was_visited(const Node* node) -> bool;
 
     /// @brief Recursive depth first search helper function
-    void dfs(const Node& node);
+    void dfs(const Node* node);
 
     /// @brief Types the graphs edges
     void type_edges();
@@ -58,6 +59,6 @@ struct DFSAnalysis : public Patriarchal {
 
     EdgeAttribute<EdgeType> types_;
 
-    std::vector<NodeId> nodes_;
+    std::vector<const Node*> nodes_;
 };
 }  // namespace triskel

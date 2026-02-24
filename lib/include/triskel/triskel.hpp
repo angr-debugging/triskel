@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "triskel/layout/ilayout.hpp"
 #include "triskel/utils/point.hpp"
 
 namespace triskel {
@@ -118,9 +119,15 @@ struct CFGLayout {
     /// block
     [[nodiscard]] virtual auto get_coords(size_t node) const -> Point = 0;
 
+    /// @brief Returns the height of a node
+    [[nodiscard]] virtual auto get_node_height(size_t node) const -> float = 0;
+
+    /// @brief Returns the width of a node
+    [[nodiscard]] virtual auto get_node_width(size_t node) const -> float = 0;
+
     /// @brief Returns the waypoints that the edge `edge` should follow
-    [[nodiscard]] virtual auto get_waypoints(size_t edge) const
-        -> const std::vector<Point>& = 0;
+    // NOLINTNEXTLINE(modernize-*) Needed for Java bindings
+    virtual std::vector<Point> const& get_waypoints(size_t edge) const = 0;
 
     /// @brief Returns the height of the graph
     [[nodiscard]] virtual auto get_height() const -> float = 0;
@@ -141,6 +148,10 @@ struct CFGLayout {
     /// @param path the path where the render will be saved
     virtual void render_and_save(ExportingRenderer& renderer,
                                  const std::filesystem::path& path) const = 0;
+
+    // Needed for Java bindings
+    virtual void render_and_save_s(ExportingRenderer& renderer,
+                                   const std::string& path) const = 0;
 };
 
 struct LayoutBuilder {
@@ -157,7 +168,7 @@ struct LayoutBuilder {
     /// @brief Adds a node to the graph.
     /// This node will have a custom size
     /// @return The id of the node in the graph
-    virtual auto make_node(float height, float width) -> size_t = 0;
+    virtual auto make_node(float width, float height) -> size_t = 0;
 
     /// @brief Adds a node to the graph.
     /// The label will determine the width and height of this node
@@ -168,8 +179,8 @@ struct LayoutBuilder {
     /// The label will determine the width and height of this node using the
     /// renderer
     /// @return The id of the node in the graph
-    virtual auto make_node(const Renderer& renderer,
-                           const std::string& label) -> size_t = 0;
+    virtual auto make_node(const Renderer& renderer, const std::string& label)
+        -> size_t = 0;
 
     /// @brief Calculates the dimension of each node using the renderer
     /// This will overwrite any existing widths and heights
@@ -188,9 +199,28 @@ struct LayoutBuilder {
 
     /// @brief Lays out the CFG
     [[nodiscard]] virtual auto build() -> std::unique_ptr<CFGLayout> = 0;
+
+    /// @brief Change the X gutter size
+    void set_x_gutter(float x_gutter) { settings.X_GUTTER = x_gutter; };
+
+    /// @brief Change the Y gutter size
+    void set_y_gutter(float y_gutter) { settings.Y_GUTTER = y_gutter; };
+
+    /// @brief Change the edge height
+    void set_edge_height(float edge_height) {
+        settings.EDGE_HEIGHT = edge_height;
+    };
+
+    /// @brief Change the padding
+    void set_padding(float padding) { settings.PADDING = padding; };
+
+   protected:
+    LayoutSettings settings;
 };
 
 [[nodiscard]] auto make_layout_builder() -> std::unique_ptr<LayoutBuilder>;
+
+[[nodiscard]] auto git_version() -> std::string;
 
 }  // namespace triskel
 
@@ -223,6 +253,12 @@ struct ImguiRenderer : Renderer {
 
     /// @brief Resize and center the canvas to the given dimensions
     virtual void fit(float width, float height) = 0;
+
+    /// @brief Pauses the canvas
+    virtual void Suspend() = 0;
+
+    /// @brief Resumes the canvas
+    virtual void Resume() = 0;
 };
 
 /// @brief Builds a renderer to draw CFGs in Dear ImGui

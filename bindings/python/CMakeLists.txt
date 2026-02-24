@@ -1,5 +1,5 @@
 project(pytriskel
-  VERSION 1.0.1
+  VERSION ${TRISKEL_VERSION}
   DESCRIPTION "Python bindings for the triskel CFG layout library"
   LANGUAGES CXX C)
 

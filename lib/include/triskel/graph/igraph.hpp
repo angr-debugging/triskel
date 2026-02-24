@@ -2,11 +2,14 @@
 
 #include <cassert>
 #include <compare>
+#include <concepts>
 #include <cstddef>
-#include <deque>
-#include <ranges>
+#include <memory>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <vector>
+#include <span>
 
 namespace triskel {
 
@@ -40,10 +43,22 @@ auto format_as(const ID<Tag>& id) -> std::string {
     return std::to_string(static_cast<size_t>(id));
 }
 
+}  // namespace triskel
+
+template <typename Tag>
+struct std::hash<triskel::ID<Tag>> {
+    auto operator()(triskel::ID<Tag> k) const -> std::size_t {
+        return std::hash<size_t>{}(static_cast<size_t>(k));
+    }
+};
+
+namespace triskel {
+
 /// @brief A struct with and id
 template <typename Tag>
 struct Identifiable {
-    virtual ~Identifiable()                          = default;
+    virtual ~Identifiable() = default;
+
     [[nodiscard]] virtual auto id() const -> ID<Tag> = 0;
 
     auto operator==(const Identifiable& other) const -> bool {
@@ -63,71 +78,80 @@ struct EdgeTag {};
 using EdgeId = ID<EdgeTag>;
 static_assert(std::is_trivially_copyable_v<EdgeId>);
 
-struct GraphData;
-
-struct NodeData {
-    NodeId id;
-    std::vector<EdgeId> edges;
-    bool deleted;
-};
-
-struct EdgeData {
-    EdgeId id;
-    NodeId from;
-    NodeId to;
-    bool deleted;
-};
-
-struct GraphData {
-    NodeId root;
-
-    std::deque<NodeData> nodes;
-    std::deque<EdgeData> edges;
-};
-
 struct Edge;
+struct Node;
 struct IGraph;
 struct IGraphEditor;
 
+template <typename T>
+using Container = std::span<T>;
+
+template <typename K, typename V>
+using Map = std::unordered_map<K, V>;
+
+using NodeMap = Map<NodeId, std::unique_ptr<Node>>;
+using EdgeMap = Map<EdgeId, std::unique_ptr<Edge>>;
+
+struct GraphData {
+    NodeId root = NodeId::InvalidID;
+
+    NodeMap nodes;
+    EdgeMap edges;
+};
+
 struct Node : public Identifiable<NodeTag> {
-    Node(const IGraph& g, const NodeData& n) : g_{g}, n_{&n} {}
+    explicit Node(NodeId id) : id_{id} {}
+
+    Node(const Node&)                    = delete;
+    auto operator=(const Node&) -> Node& = delete;
+
     ~Node() override = default;
 
-    auto operator=(const Node& node) -> Node&;
-
     [[nodiscard]] auto id() const -> NodeId final;
-    [[nodiscard]] auto edges() const -> std::vector<Edge>;
 
-    [[nodiscard]] auto child_edges() const -> std::vector<Edge>;
-    [[nodiscard]] auto parent_edges() const -> std::vector<Edge>;
+    [[nodiscard]] auto children_count() const -> size_t;
 
-    [[nodiscard]] auto child_nodes() const -> std::vector<Node>;
-    [[nodiscard]] auto parent_nodes() const -> std::vector<Node>;
-    [[nodiscard]] auto neighbors() const -> std::vector<Node>;
+    [[nodiscard]] auto parent_count() const -> size_t;
 
-    [[nodiscard]] auto is_root() const -> bool;
+    [[nodiscard]] auto neighbor_count() const -> size_t;
 
-   private:
-    const IGraph& g_;
-    const NodeData* n_;
+    [[nodiscard]] auto edges() const -> Container<Edge*>;
+
+    [[nodiscard]] auto child_edges() const -> Container<Edge*>;
+
+    [[nodiscard]] auto parent_edges() const -> Container<Edge*>;
+
+    NodeId id_;
+
+    // To return spans
+    mutable std::vector<Edge*> edges_;
+
+    // The first half are parent edges, the second half are child edges
+    size_t separator_ = 0;
 };
 
 struct Edge : public Identifiable<EdgeTag> {
-    Edge(const IGraph& g, const EdgeData& e);
+    explicit Edge(EdgeId id) : id_{id} {};
     ~Edge() override = default;
 
-    auto operator=(const Edge& other) -> Edge&;
+    Edge(const Edge&)                    = delete;
+    auto operator=(const Edge&) -> Edge& = delete;
 
     [[nodiscard]] auto id() const -> EdgeId final;
-    [[nodiscard]] auto from() const -> Node;
-    [[nodiscard]] auto to() const -> Node;
 
     /// @brief Returns the other side of the edge
-    [[nodiscard]] auto other(NodeId n) const -> Node;
+    [[nodiscard]] auto other(NodeId n) const -> Node*;
 
-   private:
-    const IGraph& g_;
-    const EdgeData* e_;
+    EdgeId id_;
+
+    Node* from;
+    Node* to;
+
+    /// @brief Adds the edge to each of its nodes
+    void link();
+
+    /// @brief Removes the edge from each of its nodes
+    void unlink();
 };
 
 /// @brief An interface for a graph
@@ -135,19 +159,19 @@ struct IGraph {
     virtual ~IGraph() = default;
 
     /// @brief The root of this graph
-    [[nodiscard]] virtual auto root() const -> Node = 0;
+    [[nodiscard]] virtual auto root() const -> Node* = 0;
 
     /// @brief The nodes in this graph
-    [[nodiscard]] virtual auto nodes() const -> std::vector<Node> = 0;
+    [[nodiscard]] virtual auto nodes() const -> Container<Node*> = 0;
 
     /// @brief The edges in this graph
-    [[nodiscard]] virtual auto edges() const -> std::vector<Edge> = 0;
+    [[nodiscard]] virtual auto edges() const -> Container<Edge*> = 0;
 
     /// @brief Turns a NodeId into a Node
-    [[nodiscard]] virtual auto get_node(NodeId id) const -> Node = 0;
+    [[nodiscard]] virtual auto get_node(NodeId id) const -> Node* = 0;
 
     /// @brief Turns an EdgeId into an Edge
-    [[nodiscard]] virtual auto get_edge(EdgeId id) const -> Edge = 0;
+    [[nodiscard]] virtual auto get_edge(EdgeId id) const -> Edge* = 0;
 
     /// @brief The greatest id in this graph
     [[nodiscard]] virtual auto max_node_id() const -> size_t = 0;
@@ -164,34 +188,16 @@ struct IGraph {
     /// @brief Gets the editor attached to this graph
     [[nodiscard]] virtual auto editor() -> IGraphEditor& = 0;
 
-    /// @brief Turns a NodeId into a Node
-    [[nodiscard]] virtual auto get_nodes(
-        const std::span<const NodeId>& ids) const -> std::vector<Node>;
+    /// @brief Does this subgraph have this node
+    [[nodiscard]] virtual auto contains(NodeId node) -> bool = 0;
 
-    /// @brief Turns an EdgeId into an Edge
-    [[nodiscard]] virtual auto get_edges(
-        const std::span<const EdgeId>& ids) const -> std::vector<Edge>;
-
-   protected:
-    /// @brief Maps a range of NodeID's to a range of Nodes
-    [[nodiscard]] auto node_view() const {
-        return std::views::transform(
-                   [&](NodeId id) { return get_node(id); })  //
-               | std::ranges::to<std::vector<Node>>();
-    }
-
-    /// @brief Maps a range of EdgeID's to a range of Edges
-    [[nodiscard]] auto edge_view() const {
-        return std::views::transform(
-                   [&](EdgeId id) { return get_edge(id); })  //
-               | std::ranges::to<std::vector<Edge>>();
-    }
+    /// @brief Does this subgraph have this edge
+    [[nodiscard]] virtual auto contains(EdgeId edge) -> bool = 0;
 };
 
 auto format_as(const Node& n) -> std::string;
 auto format_as(const Edge& e) -> std::string;
 auto format_as(const IGraph& g) -> std::string;
-
 struct IGraphEditor {
     virtual ~IGraphEditor() = default;
 
@@ -199,7 +205,7 @@ struct IGraphEditor {
     // Nodes
     // ==========
     /// @brief Adds a node to the graph
-    virtual auto make_node() -> Node = 0;
+    virtual auto make_node() -> Node* = 0;
 
     /// @brief Removes a node from the graph
     /// This will also remove all the edges that contain this node
@@ -209,7 +215,7 @@ struct IGraphEditor {
     // Edges
     // ==========
     /// @brief Create a new edge between two nodes
-    virtual auto make_edge(NodeId from, NodeId to) -> Edge = 0;
+    virtual auto make_edge(NodeId from, NodeId to) -> Edge* = 0;
 
     /// @brief Modifies the start and end point of an edge
     virtual void edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) = 0;
@@ -226,7 +232,9 @@ struct IGraphEditor {
     /// @brief Removes all changes from the current frame
     virtual void pop() = 0;
 
-    /// @brief Writes all changes to the graph, erasing the modification frames
+    /// @brief Writes all changes to the graph, erasing the modification
+    /// frames
     virtual void commit() = 0;
 };
+
 }  // namespace triskel

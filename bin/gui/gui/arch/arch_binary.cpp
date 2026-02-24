@@ -65,25 +65,25 @@ struct BinArch : public Arch {
         auto widths  = NodeAttribute<float>{*cfg->graph, {}};
         auto heights = NodeAttribute<float>{*cfg->graph, {}};
 
-        for (const auto& node : cfg->graph->nodes()) {
+        for (const auto* node : cfg->graph->nodes()) {
             auto label = std::string{};
 
-            for (const auto& insn : cfg->instructions.get(node)) {
+            for (const auto& insn : cfg->instructions[node]) {
                 label += fmt::format("{:x} {}\n", insn.addr, insn.repr);
             }
 
             auto bbox = renderer.measure_text(label, renderer.STYLE_TEXT);
 
-            labels.set(node, label);
-            widths.set(node, bbox.x);
-            heights.set(node, bbox.y);
+            labels[node]  = label;
+            widths[node]  = bbox.x;
+            heights[node] = bbox.y;
         }
 
-        for (const auto& edge : cfg->graph->edges()) {
-            const auto& from = edge.from();
+        for (const auto* edge : cfg->graph->edges()) {
+            const auto& from = edge->from;
 
-            if (from.child_edges().size() == 2) {
-                auto last_addr = cfg->instructions.get(from).back().addr;
+            if (from->children_count() == 2) {
+                auto last_addr = cfg->instructions[from].back().addr;
             }
         }
 

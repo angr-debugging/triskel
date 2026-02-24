@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <cstddef>
 #include "triskel/triskel.hpp"
 #include "triskel/utils/point.hpp"
@@ -12,9 +13,9 @@ using EdgeType = triskel::LayoutBuilder::EdgeType;
 
 PYBIND11_MODULE(pytriskel, m) {
     py::enum_<EdgeType>(m, "EdgeType")
-        .value("Default", EdgeType::Default)
-        .value("T", EdgeType::True)
-        .value("F", EdgeType::False)
+        .value("EdgeTypeDefault", EdgeType::Default)
+        .value("EdgeTypeTrue", EdgeType::True)
+        .value("EdgeTypeFalse", EdgeType::False)
         .export_values();
 
     py::class_<triskel::Renderer> Renderer(m, "Renderer");
@@ -23,7 +24,7 @@ PYBIND11_MODULE(pytriskel, m) {
         m, "ExportingRenderer");
 
     py::class_<triskel::Point>(m, "Point")
-        .def(py::init<size_t, size_t>())
+        .def(py::init<float, float>())
         .def_readwrite("x", &triskel::Point::x)
         .def_readwrite("y", &triskel::Point::y);
 
@@ -32,9 +33,13 @@ PYBIND11_MODULE(pytriskel, m) {
              "Gets the x and y coordinate of a node")
         .def("get_waypoints", &triskel::CFGLayout::get_waypoints,
              "Gets the waypoints of an edge")
+        .def("get_node_height", &triskel::CFGLayout::get_node_height,
+             "Gets height of a node")
+        .def("get_node_width", &triskel::CFGLayout::get_node_width,
+             "Gets width of a node")
         .def("get_height", &triskel::CFGLayout::get_height,
              "Gets height of the graph")
-        .def("get_height", &triskel::CFGLayout::get_width,
+        .def("get_width", &triskel::CFGLayout::get_width,
              "Gets width of the graph")
         .def(
             "save",
@@ -71,6 +76,16 @@ PYBIND11_MODULE(pytriskel, m) {
              "Creates a new edge", "from", "to", "type")
         .def("measure_nodes", &triskel::LayoutBuilder::measure_nodes,
              "Calculates the dimension of each node using the renderer")
+        .def("set_x_gutter", &triskel::LayoutBuilder::set_x_gutter,
+             "Change settings for X gutter")
+        .def("set_y_gutter", &triskel::LayoutBuilder::set_y_gutter,
+             "Change settings for Y gutter")
+        .def("set_edge_height", &triskel::LayoutBuilder::set_edge_height,
+             "Change settings for edge height")
+        .def("set_padding", &triskel::LayoutBuilder::set_padding,
+             "Change settings for padding")
+        .def("graphviz", &triskel::LayoutBuilder::graphviz,
+             "Dot representation for debugging")
         .def("build", &triskel::LayoutBuilder::build, "Builds the layout");
 
     m.def("make_layout_builder", &triskel::make_layout_builder);
@@ -78,4 +93,6 @@ PYBIND11_MODULE(pytriskel, m) {
     m.def("make_png_renderer", &triskel::make_png_renderer);
 
     m.def("make_svg_renderer", &triskel::make_svg_renderer);
+
+    m.def("git_version", &triskel::git_version);
 }

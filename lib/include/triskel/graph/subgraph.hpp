@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
-
-#include "triskel/graph/graph.hpp"
+#include <stack>
+#include "triskel/graph/frame.hpp"
 #include "triskel/graph/igraph.hpp"
+#include "triskel/graph/owning_graph.hpp"
 
 namespace triskel {
 
@@ -13,18 +13,21 @@ struct SubGraphEditor : public IGraphEditor {
     /// @brief A graph editor with source control
     explicit SubGraphEditor(SubGraph& g);
 
+    explicit SubGraphEditor(const SubGraphEditor&)           = delete;
+    auto operator=(const SubGraphEditor&) -> SubGraphEditor& = delete;
+
     /// @brief Adds a node from the graph to the subgraph
-    void select_node(NodeId node);
+    void select_node(NodeId id, bool use_frame = false);
 
     /// @brief Removes a node from the subgraph
-    void unselect_node(NodeId node);
+    void unselect_node(NodeId id, bool use_frame = false);
 
     /// @brief Make root
     void make_root(NodeId node);
 
-    auto make_node() -> Node override;
+    auto make_node() -> Node* override;
     void remove_node(NodeId node) override;
-    auto make_edge(NodeId from, NodeId to) -> Edge override;
+    auto make_edge(NodeId from, NodeId to) -> Edge* override;
     void edit_edge(EdgeId edge, NodeId new_from, NodeId new_to) override;
     void remove_edge(EdgeId edge) override;
     void push() override;
@@ -32,52 +35,39 @@ struct SubGraphEditor : public IGraphEditor {
     void commit() override;
 
    private:
-    SubGraph& g_;
-    GraphEditor& editor_;
+    SubGraph& sg_;
+    IGraphEditor& editor_;
+
+    auto frame() -> Frame&;
+    std::stack<Frame> frames;
+
+    /// @brief Add an edge to the subgraph
+    void select_edge(const Edge* edge, bool use_frame);
 
     /// @brief Add a node's edges to the subgraph
-    void select_edges(NodeId node);
+    void select_edges(NodeId node, bool use_frame);
 
     /// @brief Remove a node's edges to the subgraph
-    void unselect_edges(NodeId node);
-
-    /// @brief Assert that an edge is in the subgraph
-    void assert_present(EdgeId edge);
-
-    /// @brief Assert that an edge is not the subgraph
-    void assert_missing(EdgeId edge);
+    void unselect_edges(NodeId node, bool use_frame);
 };
 
 /// @brief A graph that contains only some nodes of another graph
-struct SubGraph : public IGraph {
-    explicit SubGraph(Graph& g);
+// TODO: make an intersection of graph and subgraph that does not have the
+// editor
+struct SubGraph : public OwningGraph {
+    explicit SubGraph(IGraph& g);
 
-    [[nodiscard]] auto root() const -> Node override;
-    [[nodiscard]] auto nodes() const -> std::vector<Node> override;
-    [[nodiscard]] auto edges() const -> std::vector<Edge> override;
-    [[nodiscard]] auto get_node(NodeId id) const -> Node override;
-    [[nodiscard]] auto get_edge(EdgeId id) const -> Edge override;
-    [[nodiscard]] auto max_node_id() const -> size_t override;
-    [[nodiscard]] auto max_edge_id() const -> size_t override;
-    [[nodiscard]] auto node_count() const -> size_t override;
-    [[nodiscard]] auto edge_count() const -> size_t override;
+    /// @brief The root of this graph
     [[nodiscard]] auto editor() -> SubGraphEditor& override;
 
-    [[nodiscard]] auto contains(NodeId node) -> bool;
-    [[nodiscard]] auto contains(EdgeId edge) -> bool;
+    /// @brief The greatest id in this graph
+    [[nodiscard]] auto max_node_id() const -> size_t override;
 
-    [[nodiscard]] auto get_nodes(const std::span<const NodeId>& ids) const
-        -> std::vector<Node> override;
-
-    [[nodiscard]] auto get_edges(const std::span<const EdgeId>& ids) const
-        -> std::vector<Edge> override;
+    /// @brief The greatest id in this graph
+    [[nodiscard]] auto max_edge_id() const -> size_t override;
 
    private:
-    Graph& g_;
-
-    NodeId root_;
-    std::vector<NodeId> nodes_;
-    std::vector<EdgeId> edges_;
+    IGraph& g_;
 
     SubGraphEditor editor_;
 

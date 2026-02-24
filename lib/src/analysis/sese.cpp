@@ -13,6 +13,7 @@
 #include "triskel/graph/graph.hpp"
 #include "triskel/graph/igraph.hpp"
 #include "triskel/utils/attribute.hpp"
+#include "triskel/utils/generator.hpp"
 #include "triskel/utils/tree.hpp"
 
 // NOLINTNEXTLINE(google-build-using-namespace)
@@ -38,9 +39,6 @@ void push(BracketList& bl, Bracket e) {
 }
 
 auto top(BracketList& bl) -> Bracket {
-    if (bl.empty()) {
-        throw std::runtime_error("EMPTY BL");
-    }
     return bl.back();
 }
 
@@ -83,49 +81,50 @@ SESE::SESE(Graph& g)
 
     udfs_ = std::make_unique<UnorderedDFSAnalysis>(g);
 
-    for (const auto& n : udfs_->nodes() | std::views::reverse) {
+    const auto nodes = span_to_vec(udfs_->nodes());
+    for (const auto* n : nodes | std::views::reverse) {
         const size_t hi0 = get_hi0(n);
         const size_t hi1 = get_hi1(n);
-        his_.set(n, std::min(hi0, hi1));
+        his_.set(*n, std::min(hi0, hi1));
         const size_t hi2 = get_hi2(n, hi1);
 
-        auto& blist = blists_.get(n);
+        auto& blist = blists_.get(*n);
 
-        for (const auto& child : udfs_->children(n)) {
-            bl::cat(blist, blists_.get(child));
+        for (const auto* child : udfs_->children(n)) {
+            bl::cat(blist, blists_.get(*child));
         }
 
         for (auto d : capping_backedges_) {
-            auto b     = g_.get_edge(d);
-            auto child = b.other(n);
+            auto* b     = g_.get_edge(d);
+            auto* child = b->other(*n);
             if (udfs_->succeed(child, n)) {
-                bl::del(blist, b.id());
+                bl::del(blist, b->id());
             }
         }
 
-        for (const auto& b : n.edges()) {
-            const auto& t = b.other(n);
+        for (const auto* b : n->edges()) {
+            const auto& t = b->other(*n);
             if (is_backedge_stating_from(b, t, n)) {
-                bl::del(blist, b.id());
+                bl::del(blist, *b);
 
-                if (classes_.get(b) == 0) {
-                    classes_.set(b, new_class());
+                if (classes_.get(*b) == 0) {
+                    classes_.set(*b, new_class());
                 }
             }
         }
 
-        for (const auto& b : n.edges()) {
-            const auto& t = b.other(n);
+        for (const auto& b : n->edges()) {
+            const auto& t = b->other(*n);
             if (is_backedge_stating_from(b, n, t)) {
-                bl::push(blist, b.id());
+                bl::push(blist, b->id());
             }
         }
 
         if (hi2 < hi0) {
-            create_capping_backedge(n, blist, hi2);
+            create_capping_backedge(nodes, n, blist, hi2);
         }
 
-        if (!n.is_root()) {
+        if (n != g.root()) {
             determine_class(n, blist);
         }
     }
@@ -140,44 +139,100 @@ SESE::SESE(Graph& g)
     visited           = NodeAttribute<bool>{g_, false};
     auto& root_region = regions.make_node();
     regions.root      = &root_region;
-    construct_program_structure_tree(g.root(), &root_region, visited);
+    construct_program_structure_tree(g.root(), root_region, visited);
 }
 
+namespace {
+// One needs to exist!
+auto get_new_sink(const IGraph& g, const NodeAttribute<bool>& visited)
+    -> const Node* {
+    for (const auto* node : g.nodes()) {
+        if (!visited[node]) {
+            return node;
+        }
+    }
+
+    throw std::runtime_error("All the nodes are visited");
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+void reaches_exit_backwards(NodeAttribute<bool>& visited,
+                            size_t& visited_count,
+                            const Node* node) {
+    visited[node] = true;
+    visited_count += 1;
+
+    for (const auto* e : node->parent_edges()) {
+        const auto& child = e->from;
+
+        if (!visited[child]) {
+            reaches_exit_backwards(visited, visited_count, child);
+        }
+    }
+}
+}  // namespace
+
 void SESE::preprocess_graph() {
-    auto& ge = g_.editor();
+    // create_phantom_nodes(g_);
 
-    auto exit = ge.make_node();
-
-    for (const auto& node : g_.nodes()) {
+    auto& ge   = g_.editor();
+    auto* exit = ge.make_node();
+    for (const auto* node : g_.nodes()) {
         if (node == exit) {
             continue;
         }
 
-        if (node.child_edges().empty()) {
-            ge.make_edge(node, exit);
+        if (node->child_edges().empty()) {
+            ge.make_edge(*node, *exit);
         }
     }
 
     // The graph is already strongly connected
     // TODO: FIX THIS
-    if (exit.parent_edges().empty()) {
-        ge.remove_node(exit);
+    if (exit->parent_edges().empty()) {
+        ge.remove_node(*exit);
     } else {
-        ge.make_edge(exit, g_.root());
+        ge.make_edge(*exit, *g_.root());
     }
+
+    // auto visited         = NodeAttribute<bool>{g_, false};
+    // size_t visited_count = 0;
+
+    // reaches_exit_backwards(visited, visited_count, g_.root());
+
+    // const auto node_count = g_.node_count();
+    // if (visited_count != node_count) {
+    //     auto* exit = ge.make_node();
+
+    //     for (const auto* node : g_.nodes()) {
+    //         if ((node->children_count() == 0) && (node != exit)) {
+    //             ge.make_edge(*node, *exit);
+    //             reaches_exit_backwards(visited, visited_count, node);
+    //         }
+    //     }
+
+    //     while (visited_count != node_count + 1) {
+    //         const auto& sink = get_new_sink(g_, visited);
+    //         ge.make_edge(*sink, *exit);
+    //         reaches_exit_backwards(visited, visited_count, sink);
+    //     }
+
+    //     assert(exit->parent_count() != 0);
+    //     ge.make_edge(*exit, *g_.root());
+    // }
 }
 
-auto SESE::is_backedge_stating_from(const Edge& edge,
-                                    const Node& from,
-                                    const Node& to) -> bool {
+auto SESE::is_backedge_stating_from(const Edge* edge,
+                                    const Node* from,
+                                    const Node* to) -> bool {
     return udfs_->is_backedge(edge) && udfs_->succeed(from, to);
 }
 
-auto SESE::get_hi0(const Node& node) -> size_t {
+auto SESE::get_hi0(const Node* node) -> size_t {
     size_t hi0 = -1;
 
-    for (const auto& b : node.edges()) {
-        const auto& t = b.other(node);
+    for (const auto* b : node->edges()) {
+        const auto& t = b->other(*node);
 
         if (is_backedge_stating_from(b, node, t)) {
             hi0 = std::min(hi0, udfs_->dfs_num(t));
@@ -187,34 +242,34 @@ auto SESE::get_hi0(const Node& node) -> size_t {
     return hi0;
 }
 
-auto SESE::get_hi1(const Node& node) -> size_t {
+auto SESE::get_hi1(const Node* node) -> size_t {
     size_t hi1 = -1;
 
-    for (const auto& b : node.edges()) {
-        const auto& child = b.other(node);
+    for (const auto* b : node->edges()) {
+        const auto& child = b->other(*node);
 
-        if ((!udfs_->parents(child).empty()) &&
+        if ((udfs_->parent_count(child) != 0) &&
             (udfs_->parent(child) == node)) {
-            hi1 = std::min(hi1, his_.get(child));
+            hi1 = std::min(hi1, his_[child]);
         }
     }
 
     return hi1;
 }
 
-auto SESE::get_hi2(const Node& node, size_t hi1) -> size_t {
+auto SESE::get_hi2(const Node* node, size_t hi1) -> size_t {
     size_t hi2 = -1;
 
     // Any child c of n having c.hi = hi1 should be interpreted as A child c of
     // n having c.hi = hi1
     bool skipped_one = false;
 
-    for (const auto& b : node.edges()) {
-        const auto& child = b.other(node);
+    for (const auto& b : node->edges()) {
+        const auto& child = b->other(*node);
 
-        if ((!udfs_->parents(child).empty()) &&
+        if ((udfs_->parent_count(child) != 0) &&
             (udfs_->parent(child) == node)) {
-            const auto hi = his_.get(child);
+            const auto hi = his_[child];
             if (!skipped_one && hi == hi1) {
                 skipped_one = true;
             } else {
@@ -226,43 +281,44 @@ auto SESE::get_hi2(const Node& node, size_t hi1) -> size_t {
     return hi2;
 }
 
-void SESE::create_capping_backedge(const Node& node,
+void SESE::create_capping_backedge(const std::vector<const Node*>& nodes,
+                                   const Node* node,
                                    BracketList& blist,
                                    size_t hi2) {
-    auto& ge     = g_.editor();
-    const auto d = ge.make_edge(node, udfs_->nodes()[hi2]);
+    auto& ge      = g_.editor();
+    const auto* d = ge.make_edge(*node, *nodes[hi2]);
     udfs_->set_backedge(d);
-    capping_backedges_.push_back(d.id());
-    bl::push(blist, d.id());
+    capping_backedges_.push_back(d->id());
+    bl::push(blist, d->id());
 }
 
-void SESE::determine_class(const Node& node, BracketList& blist) {
-    auto e = get_parent_tree_edge(node);
-    auto b = g_.get_edge(bl::top(blist));
+void SESE::determine_class(const Node* node, BracketList& blist) {
+    auto* e = get_parent_tree_edge(node);
+    auto* b = g_.get_edge(bl::top(blist));
 
-    auto& recent_size  = recent_sizes_.get(b);
-    auto& recent_class = recent_classes_.get(b);
+    auto& recent_size  = recent_sizes_[b];
+    auto& recent_class = recent_classes_[b];
     if (recent_size != bl::size(blist)) {
         recent_size  = bl::size(blist);
         recent_class = new_class();
     }
 
-    auto& e_class = classes_.get(e);
+    auto& e_class = classes_[e];
     e_class       = recent_class;
 
     if (recent_size == 1) {
-        classes_.set(b, e_class);
+        classes_[b] = e_class;
     }
 }
 
-auto SESE::get_parent_tree_edge(const Node& node) -> Edge {
+auto SESE::get_parent_tree_edge(const Node* node) -> Edge* {
     auto e_id = EdgeId::InvalidID;
 
     // TODO: move this to udfs
-    for (const auto& edge : node.edges()) {
-        const auto& t = edge.other(node);
+    for (const auto* edge : node->edges()) {
+        const auto& t = edge->other(*node);
         if ((udfs_->is_tree(edge)) && (udfs_->parent(node) == t)) {
-            e_id = edge.id();
+            e_id = edge->id();
             break;
         }
     }
@@ -273,16 +329,16 @@ auto SESE::get_parent_tree_edge(const Node& node) -> Edge {
 
 // NOLINTNEXTLINE(misc-no-recursion)
 void SESE::determine_region_boundaries(
-    const Node& node,
+    const Node* node,
     NodeAttribute<bool>& visited,
     const std::vector<NodeClass>& visited_class_) {
-    visited.set(node, true);
+    visited[node] = true;
 
-    for (const auto& edge : node.child_edges()) {
+    for (const auto* edge : node->child_edges()) {
         auto visited_class = visited_class_;
-        const auto& child  = edge.to();
+        const auto& child  = edge->to;
 
-        auto edge_class = classes_.get(edge);
+        auto edge_class = classes_.get(*edge);
 
         bool exiting_region = false;
         size_t i            = 0;
@@ -290,7 +346,7 @@ void SESE::determine_region_boundaries(
             i++;
 
             if (node_class.edge_class == edge_class) {
-                exit_edge_.set(edge, true);
+                exit_edge_.set(*edge, true);
                 entry_edge_.set(node_class.edge, true);
 
                 // We could count how many regions need to be created
@@ -306,45 +362,45 @@ void SESE::determine_region_boundaries(
             }
         }
 
-        if (!visited.get(child)) {
-            visited_class.push_back({child.id(), edge.id(), edge_class});
+        if (!visited[child]) {
+            visited_class.push_back({child->id(), edge->id(), edge_class});
             determine_region_boundaries(child, visited, visited_class);
         }
     }
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void SESE::construct_program_structure_tree(const Node& node,
-                                            SESERegion* current_region,
+void SESE::construct_program_structure_tree(const Node* node,
+                                            SESERegion& current_region,
                                             NodeAttribute<bool>& visited) {
-    visited.set(node, true);
+    visited[node] = true;
 
-    node_regions.set(node, current_region);
-    (*current_region)->nodes.push_back(node);
+    node_regions[node] = &current_region;
+    current_region->nodes.push_back(node);
 
     auto& region = get_region(node);
 
-    for (const auto& edge : node.child_edges()) {
-        auto* curr = current_region;
-        auto child = edge.to();
+    for (const auto* edge : node->child_edges()) {
+        auto* curr  = &current_region;
+        auto* child = edge->to;
 
-        if (exit_edge_.get(edge)) {
+        if (exit_edge_.get(*edge)) {
             region->exit_edge = edge;
-            region->exit_node = edge.from();
+            region->exit_node = edge->from;
             curr              = &region.parent();
         }
 
-        if (entry_edge_.get(edge)) {
+        if (entry_edge_.get(*edge)) {
             auto& region = regions.make_node();
 
             curr->add_child(&region);
             region->entry_edge = edge;
-            region->entry_node = edge.to();
+            region->entry_node = edge->to;
             curr               = &region;
         }
 
-        if (!visited.get(child)) {
-            construct_program_structure_tree(child, curr, visited);
+        if (!visited[child]) {
+            construct_program_structure_tree(child, *curr, visited);
         }
     }
 }

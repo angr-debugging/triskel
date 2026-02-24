@@ -1,8 +1,8 @@
 #include "triskel/graph/igraph.hpp"
 
 #include <cassert>
-#include <ranges>
-#include <span>
+#include <cstddef>
+#include <generator>
 #include <string>
 #include <vector>
 
@@ -13,115 +13,70 @@
 using namespace triskel;
 
 // =============================================================================
+// Edge
+// =============================================================================
+/// @brief Adds an edge to each of its nodes
+void Edge::link() {
+    // Child edges go in the back
+    from->edges_.push_back(this);
+
+    // Parent edges go in the front
+    to->edges_.insert(to->edges_.begin(), this);
+    to->separator_++;
+}
+
+/// @brief Removes an edge from each of its nodes
+void Edge::unlink() {
+    std::erase(from->edges_, this);
+    std::erase(to->edges_, this);
+    to->separator_--;
+}
+
+// =============================================================================
 // Nodes
 // =============================================================================
-auto Node::operator=(const Node& node) -> Node& {
-    if (this == &node) {
-        return *this;
-    }
-
-    assert(&g_ == &node.g_);
-    n_ = node.n_;
-    return *this;
-}
-
 auto Node::id() const -> NodeId {
-    return n_->id;
+    return id_;
 }
 
-auto Node::edges() const -> std::vector<Edge> {
-    return g_.get_edges(n_->edges);
+auto Node::neighbor_count() const -> size_t {
+    return edges_.size();
 }
 
-auto Node::child_edges() const -> std::vector<Edge> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.from() == *this; })  //
-           | std::ranges::to<std::vector<Edge>>();
+auto Node::children_count() const -> size_t {
+    return edges_.size() - separator_;
 }
 
-auto Node::parent_edges() const -> std::vector<Edge> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.to() == *this; })  //
-           | std::ranges::to<std::vector<Edge>>();
+auto Node::parent_count() const -> size_t {
+    return separator_;
 }
 
-auto Node::child_nodes() const -> std::vector<Node> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.from() == *this; })  //
-           | std::ranges::views::transform(
-                 [&](const Edge& e) { return e.to(); })  //
-           | std::ranges::to<std::vector<Node>>();
+auto Node::edges() const -> Container<Edge*> {
+    return {edges_};
 }
 
-auto Node::parent_nodes() const -> std::vector<Node> {
-    return edges()  //
-           | std::ranges::views::filter(
-                 [&](const Edge& e) { return e.to() == *this; })  //
-           | std::ranges::views::transform(
-                 [&](const Edge& e) { return e.from(); })  //
-           | std::ranges::to<std::vector<Node>>();
+auto Node::child_edges() const -> Container<Edge*> {
+    return Container<Edge*>(edges_).subspan(separator_);
 }
 
-auto Node::neighbors() const -> std::vector<Node> {
-    return edges()  //
-           | std::ranges::views::transform(
-                 [&](const Edge& e) { return e.other(*this); })  //
-           | std::ranges::to<std::vector<Node>>();
-}
-
-auto Node::is_root() const -> bool {
-    return *this == g_.root();
+auto Node::parent_edges() const -> Container<Edge*> {
+    return Container<Edge*>(edges_).subspan(0, separator_);
 }
 
 // =============================================================================
 // Edges
 // =============================================================================
-Edge::Edge(const IGraph& g, const EdgeData& e) : g_{g}, e_{&e} {}
-
-auto Edge::operator=(const Edge& other) -> Edge& {
-    if (this == &other) {
-        return *this;
-    }
-
-    assert(&g_ == &other.g_);
-    e_ = other.e_;
-    return *this;
-}
 
 auto Edge::id() const -> EdgeId {
-    return e_->id;
+    return id_;
 }
 
-auto Edge::from() const -> Node {
-    return g_.get_node(e_->from);
-}
-
-auto Edge::to() const -> Node {
-    return g_.get_node(e_->to);
-}
-
-auto Edge::other(NodeId n) const -> Node {
-    if (n == to()) {
-        return from();
+auto Edge::other(NodeId n) const -> Node* {
+    if (n == *to) {
+        return from;
     }
 
-    return to();
-}
-
-// =============================================================================
-// Graphs
-// =============================================================================
-auto IGraph::get_nodes(const std::span<const NodeId>& ids) const
-    -> std::vector<Node> {
-    return ids | node_view();
-}
-
-auto IGraph::get_edges(const std::span<const EdgeId>& ids) const
-    -> std::vector<Edge> {
-    return ids | edge_view();
+    return to;
 }
 
 // =============================================================================
@@ -132,20 +87,21 @@ auto triskel::format_as(const Node& n) -> std::string {
 }
 
 auto triskel::format_as(const Edge& e) -> std::string {
-    return fmt::format("{} -> {}", e.from(), e.to());
+    return fmt::format("{} -> {}", *e.from, *e.to);
 }
 
 auto triskel::format_as(const IGraph& g) -> std::string {
     auto s = std::string{"digraph G {\n"};
 
-    for (auto node : g.nodes()) {
-        s += fmt::format("{}\n", node);
+    for (auto* node : g.nodes()) {
+        s += fmt::format("{}\n", *node);
     }
+    s += fmt::format("{} [shape=square]", *g.root());
 
     s += "\n";
 
-    for (auto edge : g.edges()) {
-        s += fmt::format("{}\n", edge);
+    for (auto* edge : g.edges()) {
+        s += fmt::format("{}\n", *edge);
     }
 
     s += "}\n";

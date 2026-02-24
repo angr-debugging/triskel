@@ -6,6 +6,6 @@
 namespace triskel {
 
 /// @brief Calculates the immediate dominators of nodes in a graph
-[[nodiscard]] auto make_idoms(const IGraph& g) -> NodeAttribute<NodeId>;
+[[nodiscard]] auto make_idoms(const IGraph& g) -> NodeAttribute<const Node*>;
 
 }  // namespace triskel

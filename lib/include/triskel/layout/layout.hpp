@@ -18,7 +18,9 @@ namespace triskel {
 struct Layout : public ILayout {
     Layout(Graph& g,
            const NodeAttribute<float>& heights,
-           const NodeAttribute<float>& widths);
+           const NodeAttribute<float>& widths,
+           const LayoutSettings& settings);
+    explicit Layout(Graph& g, const LayoutSettings& settings);
     explicit Layout(Graph& g);
 
     [[nodiscard]] auto get_x(NodeId node) const -> float override;
@@ -48,8 +50,8 @@ struct Layout : public ILayout {
     struct RegionData {
         explicit RegionData(Graph& g);
 
-        SubGraph subgraph;
-        NodeId node_id;
+        std::unique_ptr<SubGraph> subgraph;
+        const Node* node_ptr;
 
         std::vector<IOPair> entries;
         std::vector<IOPair> exits;
@@ -78,7 +80,7 @@ struct Layout : public ILayout {
     /// @brief Edit a region's exit edge
     void edit_region_exit(const SESE::SESERegion& r);
 
-    auto get_region_node(const SESE::SESERegion& r) const -> Node;
+    auto get_region_node(const SESE::SESERegion& r) const -> const Node*;
 
     auto get_editor(const SESE::SESERegion& r) -> SubGraphEditor&;
 

@@ -5,16 +5,12 @@ set -e -u -x
 rm dist/* || true
 
 # Creates a build directory
-mkdir /build
-
-yum install -y cairo cairo-devel
+mkdir /build || true
+mkdir -p /build/wheelhouse || true
 
 export PLAT="manylinux_2_34_x86_64"
 
 function repair_wheel {
-    export LD_LIBRARY_PATH=/lib:$LD_LIBRARY_PATH
-    export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
-
     wheel="$1"
     if ! auditwheel show "$wheel"; then
         echo "Skipping non-platform wheel $wheel"
@@ -29,6 +25,9 @@ for PYBIN in /opt/python/*/bin; do
     mkdir --parents "${SKBUILD_DIR}"
     Python_ROOT_DIR=${PYBIN} "${PYBIN}/pip" wheel -w /build/wheelhouse/ . || true
 done
+
+export LD_LIBRARY_PATH=/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
 
 # Bundle external shared libraries into the wheels
 for whl in /build/wheelhouse/*.whl; do

@@ -1,5 +1,5 @@
 project(triskel-wasm
-    VERSION 1.0.0
+    VERSION ${TRISKEL_VERSION}
     DESCRIPTION "WASM version of the triskel CFG layout library"
     LANGUAGES CXX C
 )
