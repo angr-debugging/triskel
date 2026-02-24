@@ -40,27 +40,37 @@ set(Cairo cairo)
 
 if(Cairo_LIBRARY)
   add_library(${Cairo} SHARED IMPORTED)
-  set_property(TARGET ${Cairo} PROPERTY IMPORTED_LOCATION "${Cairo_LIBRARY}")
+  set_target_properties(${Cairo} PROPERTIES
+    IMPORTED_LOCATION "C:/Users/chris/vcpkg/installed/x64-windows/bin/cairo-2.dll"
+    IMPORTED_IMPLIB   "C:/Users/chris/vcpkg/installed/x64-windows/lib/cairo.lib"
+  )
+
+  # Try to find the DLL next to the import lib (vcpkg layout)
+  get_filename_component(_cairo_libdir "${Cairo_LIBRARY}" DIRECTORY)
+  get_filename_component(_cairo_prefix "${_cairo_libdir}" DIRECTORY)
+  find_file(_cairo_dll
+    NAMES cairo-2.dll cairo.dll
+    PATHS "${_cairo_prefix}/bin"
+    NO_DEFAULT_PATH
+  )
+
+  if(_cairo_dll)
+    set_property(TARGET ${Cairo} PROPERTY IMPORTED_LOCATION "${_cairo_dll}")
+  endif()
+
   set_property(TARGET ${Cairo} PROPERTY INTERFACE_COMPILE_OPTIONS "${Cairo_PKG_CFLAGS_OTHER}")
 
   set(Cairo_INCLUDE_DIRS)
-
-  find_path(Cairo_INCLUDE_DIR "cairo.h"
-    HINTS ${Cairo_PKG_INCLUDE_DIRS})
+  find_path(Cairo_INCLUDE_DIR "cairo/cairo.h"
+    HINTS
+      ${Cairo_PKG_INCLUDE_DIRS}
+      ${CMAKE_PREFIX_PATH}
+    PATH_SUFFIXES
+      include
+  )
 
   if(Cairo_INCLUDE_DIR)
-    file(STRINGS "${Cairo_INCLUDE_DIR}/cairo-version.h" Cairo_VERSION_MAJOR REGEX "^#define CAIRO_VERSION_MAJOR +\\(?([0-9]+)\\)?$")
-    string(REGEX REPLACE "^#define CAIRO_VERSION_MAJOR \\(?([0-9]+)\\)?$" "\\1" Cairo_VERSION_MAJOR "${Cairo_VERSION_MAJOR}")
-    file(STRINGS "${Cairo_INCLUDE_DIR}/cairo-version.h" Cairo_VERSION_MINOR REGEX "^#define CAIRO_VERSION_MINOR +\\(?([0-9]+)\\)?$")
-    string(REGEX REPLACE "^#define CAIRO_VERSION_MINOR \\(?([0-9]+)\\)?$" "\\1" Cairo_VERSION_MINOR "${Cairo_VERSION_MINOR}")
-    file(STRINGS "${Cairo_INCLUDE_DIR}/cairo-version.h" Cairo_VERSION_MICRO REGEX "^#define CAIRO_VERSION_MICRO +\\(?([0-9]+)\\)?$")
-    string(REGEX REPLACE "^#define CAIRO_VERSION_MICRO \\(?([0-9]+)\\)?$" "\\1" Cairo_VERSION_MICRO "${Cairo_VERSION_MICRO}")
-    set(Cairo_VERSION "${Cairo_VERSION_MAJOR}.${Cairo_VERSION_MINOR}.${Cairo_VERSION_MICRO}")
-    unset(Cairo_VERSION_MAJOR)
-    unset(Cairo_VERSION_MINOR)
-    unset(Cairo_VERSION_MICRO)
-
-    list(APPEND Cairo_INCLUDE_DIRS ${Cairo_INCLUDE_DIR})
+    set(Cairo_INCLUDE_DIRS "${Cairo_INCLUDE_DIR}")
     set_property(TARGET ${Cairo} PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${Cairo_INCLUDE_DIR}")
   endif()
 endif()

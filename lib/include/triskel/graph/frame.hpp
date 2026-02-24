@@ -3,6 +3,7 @@
 #include <stack>
 #include "triskel/graph/igraph.hpp"
 #include "triskel/graph/owning_graph.hpp"
+#include <variant>
 
 namespace triskel {
 struct Frame {

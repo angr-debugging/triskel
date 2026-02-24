@@ -11,6 +11,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+message(STATUS "CMAKE_CXX_STANDARD = ${CMAKE_CXX_STANDARD}")
+message(STATUS "CMAKE_CXX_STANDARD_REQUIRED = ${CMAKE_CXX_STANDARD_REQUIRED}")
+message(STATUS "CMAKE_CXX_EXTENSIONS = ${CMAKE_CXX_EXTENSIONS}")
+
 option(ENABLE_LLVM      "Adds utilities to convert LLVM functions to triskel graphs"    OFF)
 option(ENABLE_IMGUI     "Adds utilities to display graphs in imgui"                     OFF)
 option(ENABLE_CAIRO     "Adds utilities to create SVG/PNG using cairo"                  OFF)
