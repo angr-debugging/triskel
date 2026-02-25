@@ -120,11 +120,7 @@ if(UNIX AND NOT APPLE)
     set_property(TARGET ${Cairo} PROPERTY INTERFACE_LINK_LIBRARIES "${Cairo_PKG_LIBRARIES}")
 
     set(Cairo_INCLUDE_DIRS)
-
-    message("Searching for cairo/cairo.h, in dir: ${Cairo_PKG_INCLUDE_DIRS}")
-    message("Cairo path: ${Cairo_INCLUDE_DIR}")
     find_path(Cairo_INCLUDE_DIR "cairo/cairo.h" HINTS ${Cairo_PKG_INCLUDE_DIRS})
-    message("Searching for cairo/cairo.h, in dir: ${Cairo_PKG_INCLUDE_DIRS}")
 
     if(Cairo_INCLUDE_DIR)
       set(_cairo_version_header "${Cairo_INCLUDE_DIR}/cairo/cairo-version.h")
