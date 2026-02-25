@@ -39,11 +39,20 @@ if(WIN32)
   find_library(Cairo_LIBRARY cairo HINTS ${Cairo_PKG_LIBRARY_DIRS})
   set(Cairo cairo)
 
+  set(_vcpkg_prefix "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+
+  find_path(CAIRO_INCLUDE_DIR cairo/cairo.h
+    HINTS "${_vcpkg_prefix}/include"
+  )
+  find_library(CAIRO_IMPLIB cairo
+    HINTS "${_vcpkg_prefix}/lib"
+  )
+
   if(Cairo_LIBRARY)
     add_library(${Cairo} SHARED IMPORTED)
     set_target_properties(${Cairo} PROPERTIES
-      IMPORTED_LOCATION "C:/Users/chris/vcpkg/installed/x64-windows/bin/cairo-2.dll"
-      IMPORTED_IMPLIB   "C:/Users/chris/vcpkg/installed/x64-windows/lib/cairo.lib"
+      IMPORTED_LOCATION "${_vcpkg_prefix}/bin/cairo-2.dll"
+      IMPORTED_IMPLIB   "${CAIRO_IMPLIB}"
     )
 
     # Try to find the DLL next to the import lib (vcpkg layout)
