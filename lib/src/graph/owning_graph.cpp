@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <generator>
 
 #include "triskel/graph/igraph.hpp"
 

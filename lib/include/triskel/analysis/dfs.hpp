@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <generator>
 #include <vector>
 
 #include "triskel/analysis/patriarchal.hpp"
