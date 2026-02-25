@@ -1,7 +1,6 @@
 #include "triskel/analysis/udfs.hpp"
 
 #include <cstddef>
-#include <generator>
 #include <vector>
 
 #include "triskel/analysis/patriarchal.hpp"

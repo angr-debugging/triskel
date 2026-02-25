@@ -9,10 +9,12 @@
 #ifdef _WIN32
     #define NOMINMAX
     #include <windows.h>
+    #include <cairo/cairo-svg.h>
+    #include <cairo/cairo.h>
+#else
+    #include <cairo/cairo-svg.h>
+    #include <cairo/cairo.h>
 #endif
-
-#include <cairo/cairo-svg.h>
-#include <cairo/cairo.h>
 
 #include "triskel/utils/point.hpp"
 
