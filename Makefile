@@ -10,7 +10,7 @@ ifeq ($(IS_WINDOWS),0)
   .SHELLFLAGS := -euo pipefail -c
 
   # ========= User-configurable paths =========
-  PROJECT_DIR        ?= $(PWD)
+  PROJECT_DIR        ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
   VENV_PYTHON         ?= /home/ubuntu/dAngr/venv/bin/python
   SITE_PACKAGES_DST   ?= /home/ubuntu/dAngr/venv/lib/python3.12/site-packages
   MODULE_SO_NAME      ?= pytriskel.cpython-312-x86_64-linux-gnu.so
