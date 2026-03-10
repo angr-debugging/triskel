@@ -67,12 +67,14 @@ jobs:
             CMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake
             VCPKG_INSTALLED_DIR=${{ env.VCPKG_ROOT }}\installed
             VCPKG_TARGET_TRIPLET=x64-windows
+        with:
+          package-dir: bindings/python
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pytriskel-${{ matrix.os }}
-          path: libs/triskel/bindings/python/wheelhouse/*.whl
+          path: bindings/python/wheelhouse/*.whl
           if-no-files-found: error
 
   release:
