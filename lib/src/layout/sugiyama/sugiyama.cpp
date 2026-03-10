@@ -609,7 +609,7 @@ void SugiyamaAnalysis::vertex_ordering() {
 };
 
 auto SugiyamaAnalysis::get_priority(const Node* node, size_t layer) -> size_t {
-    if (std::ranges::contains(dummy_nodes_, node)) {
+    if (std::ranges::find(dummy_nodes_, node) != dummy_nodes_.end()) {
         return -1;
     }
 
