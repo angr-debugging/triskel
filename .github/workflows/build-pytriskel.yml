@@ -50,6 +50,9 @@ jobs:
       CIBW_ARCHS_WINDOWS: ${{ matrix.cibw_archs }}
       CIBW_SKIP: "*-musllinux*"
       CIBW_BEFORE_BUILD_WINDOWS: python -m pip install ninja
+      CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
+      CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
+      CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
 
     steps:
       - name: Check out repository
