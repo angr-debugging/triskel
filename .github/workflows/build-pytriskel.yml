@@ -76,10 +76,14 @@ jobs:
         if: ${{ (inputs.target == 'all' || inputs.target == matrix.target) && runner.os == 'Windows' }}
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP\vcpkg"
-          git -C "$env:RUNNER_TEMP\vcpkg" checkout 816a52c0fdf574d5ae782bbd2db2c8e87b3aeb8d
-          & "$env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat"
-          "VCPKG_ROOT=$env:RUNNER_TEMP\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $vcpkgRootNative = Join-Path $env:RUNNER_TEMP "vcpkg"
+          git clone https://github.com/microsoft/vcpkg.git $vcpkgRootNative
+          git -C $vcpkgRootNative checkout 816a52c0fdf574d5ae782bbd2db2c8e87b3aeb8d
+          & "$vcpkgRootNative\bootstrap-vcpkg.bat"
+          $vcpkgRoot = $vcpkgRootNative.Replace('\', '/')
+          "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "CMAKE_TOOLCHAIN_FILE=$vcpkgRoot/scripts/buildsystems/vcpkg.cmake" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "VCPKG_INSTALLED_DIR=$vcpkgRoot/installed" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install Windows dependencies
         if: ${{ (inputs.target == 'all' || inputs.target == matrix.target) && runner.os == 'Windows' }}
@@ -93,8 +97,8 @@ jobs:
         env:
           CIBW_ENVIRONMENT_WINDOWS: >-
             VCPKG_ROOT="${{ env.VCPKG_ROOT }}"
-            CMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
-            VCPKG_INSTALLED_DIR="${{ env.VCPKG_ROOT }}/installed"
+            CMAKE_TOOLCHAIN_FILE="${{ env.CMAKE_TOOLCHAIN_FILE }}"
+            VCPKG_INSTALLED_DIR="${{ env.VCPKG_INSTALLED_DIR }}"
             VCPKG_TARGET_TRIPLET=x64-windows
             CMAKE_GENERATOR=Ninja
         with:
