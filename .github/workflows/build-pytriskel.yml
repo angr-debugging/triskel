@@ -14,7 +14,6 @@ on:
         options:
           - all
           - linux
-          - macos-x86_64
           - macos-arm64
           - windows
       build-selector:
@@ -32,9 +31,6 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux
-            cibw_archs: x86_64
-          - os: macos-13
-            target: macos-x86_64
             cibw_archs: x86_64
           - os: macos-14
             target: macos-arm64
