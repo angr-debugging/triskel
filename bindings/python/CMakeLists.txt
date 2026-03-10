@@ -3,7 +3,10 @@ project(pytriskel
   DESCRIPTION "Python bindings for the triskel CFG layout library"
   LANGUAGES CXX C)
 
-  # Pybind
+# Force modern Python discovery before pybind11 is configured.
+set(PYBIND11_FINDPYTHON ON CACHE BOOL "" FORCE)
+
+# Pybind
 find_package(Python COMPONENTS Development.Module Interpreter REQUIRED)
 FetchContent_Declare(
     pybind11
