@@ -53,6 +53,7 @@ jobs:
       CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
       CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
       CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
+      CIBW_TEST_COMMAND: python -c "import pytriskel.pytriskel; from pytriskel import make_layout_builder"
 
     steps:
       - name: Check out repository

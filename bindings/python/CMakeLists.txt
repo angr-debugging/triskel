@@ -21,4 +21,8 @@ pybind11_add_module(pytriskel pytriskel.cpp)
 
 target_link_libraries(pytriskel PRIVATE triskel)
 
-install(TARGETS pytriskel LIBRARY DESTINATION .)
+install(
+    TARGETS pytriskel
+    LIBRARY DESTINATION .
+    RUNTIME DESTINATION .
+)

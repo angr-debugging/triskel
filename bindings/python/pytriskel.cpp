@@ -90,9 +90,11 @@ PYBIND11_MODULE(pytriskel, m) {
 
     m.def("make_layout_builder", &triskel::make_layout_builder);
 
+#ifdef TRISKEL_CAIRO
     m.def("make_png_renderer", &triskel::make_png_renderer);
 
     m.def("make_svg_renderer", &triskel::make_svg_renderer);
+#endif
 
     m.def("git_version", &triskel::git_version);
 }
