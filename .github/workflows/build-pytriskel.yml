@@ -6,6 +6,17 @@ on:
       release-tag:
         description: "Git tag to create/update as a release, e.g. v0.1.0"
         required: true
+      target:
+        description: "Which platform wheels to build"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - linux
+          - macos-x86_64
+          - macos-arm64
+          - windows
       build-selector:
         description: "cibuildwheel selector, e.g. cp312-*"
         required: true
@@ -18,10 +29,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+        include:
+          - os: ubuntu-latest
+            target: linux
+            cibw_archs: x86_64
+          - os: macos-13
+            target: macos-x86_64
+            cibw_archs: x86_64
+          - os: macos-14
+            target: macos-arm64
+            cibw_archs: arm64
+          - os: windows-latest
+            target: windows
+            cibw_archs: AMD64
+
+    if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
 
     defaults:
       run:
@@ -30,12 +52,11 @@ jobs:
     env:
       CIBW_BUILD: ${{ inputs.build-selector }}
       CIBW_ARCHS_LINUX: x86_64
-      CIBW_ARCHS_MACOS: x86_64 arm64
-      CIBW_ARCHS_WINDOWS: AMD64
-      CIBW_SKIP: pp* *-musllinux*
+      CIBW_ARCHS_MACOS: ${{ matrix.cibw_archs }}
+      CIBW_ARCHS_WINDOWS: ${{ matrix.cibw_archs }}
+      CIBW_SKIP: *-musllinux*
       CIBW_BEFORE_ALL_LINUX: yum install -y cairo-devel pkgconfig
       CIBW_BEFORE_BUILD_WINDOWS: python -m pip install delvewheel
-      CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --verbose -w {dest_dir} {wheel}
       CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: python -m delvewheel repair -w {dest_dir} {wheel}
 
     steps:
@@ -79,7 +100,7 @@ jobs:
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pytriskel-${{ matrix.os }}
+          name: pytriskel-${{ matrix.target }}
           path: bindings/python/wheelhouse/*.whl
           if-no-files-found: error
 
@@ -87,6 +108,7 @@ jobs:
     name: Publish GitHub release
     runs-on: ubuntu-latest
     needs: build
+    if: ${{ always() && contains(needs.build.result, 'success') }}
     permissions:
       contents: write
     steps:
