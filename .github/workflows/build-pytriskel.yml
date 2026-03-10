@@ -92,6 +92,8 @@ jobs:
         if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
         uses: pypa/cibuildwheel@v3.4.0
         env:
+          CIBW_ENVIRONMENT_MACOS: >-
+            MACOSX_DEPLOYMENT_TARGET=14.0
           CIBW_ENVIRONMENT_WINDOWS: >-
             VCPKG_ROOT="${{ env.VCPKG_ROOT }}"
             CMAKE_TOOLCHAIN_FILE="${{ env.CMAKE_TOOLCHAIN_FILE }}"
