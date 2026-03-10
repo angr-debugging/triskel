@@ -105,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytriskel-${{ matrix.target }}
-          path: bindings/python/wheelhouse/*.whl
+          path: wheelhouse/*.whl
           if-no-files-found: error
 
   release:
