@@ -43,8 +43,6 @@ jobs:
             target: windows
             cibw_archs: AMD64
 
-    if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
-
     defaults:
       run:
         working-directory: bindings/python
@@ -61,19 +59,21 @@ jobs:
 
     steps:
       - name: Check out repository
+        if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install macOS dependencies
-        if: runner.os == 'macOS'
+        if: ${{ (inputs.target == 'all' || inputs.target == matrix.target) && runner.os == 'macOS' }}
         run: brew install cairo pkg-config
 
       - name: Set up vcpkg
-        if: runner.os == 'Windows'
+        if: ${{ (inputs.target == 'all' || inputs.target == matrix.target) && runner.os == 'Windows' }}
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP\vcpkg"
@@ -82,12 +82,13 @@ jobs:
           "VCPKG_ROOT=$env:RUNNER_TEMP\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install Windows dependencies
-        if: runner.os == 'Windows'
+        if: ${{ (inputs.target == 'all' || inputs.target == matrix.target) && runner.os == 'Windows' }}
         shell: pwsh
         run: |
           & "$env:VCPKG_ROOT\vcpkg.exe" install cairo:x64-windows
 
       - name: Build wheels
+        if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
         uses: pypa/cibuildwheel@v3.4.0
         env:
           CIBW_ENVIRONMENT_WINDOWS: >-
@@ -100,6 +101,7 @@ jobs:
           package-dir: bindings/python
 
       - name: Upload wheel artifacts
+        if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
         uses: actions/upload-artifact@v4
         with:
           name: pytriskel-${{ matrix.target }}
