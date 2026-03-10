@@ -106,8 +106,8 @@ if(WIN32)
 
   unset(Cairo_DEPS_FOUND_VARS)
 endif()
-if(UNIX AND NOT APPLE)
-  message("Finding Cairo on Unix (non-Apple)")
+if(UNIX AND NOT WIN32)
+  message("Finding Cairo on Unix")
   find_package(PkgConfig)
 
   set(Cairo_DEPS)
