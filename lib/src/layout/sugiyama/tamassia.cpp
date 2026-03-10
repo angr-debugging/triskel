@@ -17,14 +17,14 @@ auto select_node(const IGraph& g,
                  std::vector<const Node*>& U,
                  std::vector<const Node*>& Z) -> const Node* {
     for (const auto* node : g.nodes()) {
-        if (std::ranges::contains(U, node)) {
+        if (std::ranges::find(U, node) != U.end()) {
             continue;
         }
 
         auto valid = true;
         for (const auto* child_edge : node->child_edges()) {
             const auto& child = child_edge->to;
-            if (!std::ranges::contains(Z, child)) {
+            if (std::ranges::find(Z, child) == Z.end()) {
                 valid = false;
                 break;
             }
