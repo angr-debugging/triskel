@@ -35,6 +35,7 @@ jobs:
       CIBW_SKIP: pp* *-musllinux*
       CIBW_BEFORE_ALL_LINUX: yum install -y cairo-devel pkgconfig
       CIBW_BEFORE_BUILD_WINDOWS: python -m pip install delvewheel
+      CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --verbose -w {dest_dir} {wheel}
       CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: python -m delvewheel repair -w {dest_dir} {wheel}
 
     steps:
@@ -52,16 +53,21 @@ jobs:
 
       - name: Set up vcpkg
         if: runner.os == 'Windows'
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 816a52c0fdf574d5ae782bbd2db2c8e87b3aeb8d
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP\vcpkg"
+          git -C "$env:RUNNER_TEMP\vcpkg" checkout 816a52c0fdf574d5ae782bbd2db2c8e87b3aeb8d
+          & "$env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat"
+          "VCPKG_ROOT=$env:RUNNER_TEMP\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
-        run: vcpkg install cairo:x64-windows
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT\vcpkg.exe" install cairo:x64-windows
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@v3.4.0
         env:
           CIBW_ENVIRONMENT_WINDOWS: >-
             CMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake
